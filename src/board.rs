@@ -11,15 +11,47 @@ impl Plugin for BoardPlugin {
 }
 
 fn spawn_board(mut commands: Commands) {
+    let board_size = Vec3::new(150., 150., 0.);
+    let quadrant_translation = Vec2::new(board_size.x / 2., board_size.y / 2.);
+    let padding = 20.;
+    let quadrant_offset = board_size / 2. + padding;
     commands
         .spawn()
         .insert(Name::new("Board"))
-        .insert(Transform::from_xyz(0., 0., 0.))
         .insert(GlobalTransform::default())
+        .insert(Transform::default())
         .with_children(|parent| {
             parent
-                .spawn_bundle(make_hole_bundle(Color::SALMON, (0., 0.)))
-                .insert(Name::new("Six Hole"));
+                .spawn_bundle(make_hole_bundle(Color::GOLD, (0., 0.)))
+                .insert(Name::new("Pig Hole"));
+            parent
+                .spawn()
+                .insert(Name::new("Top Right"))
+                .insert(GlobalTransform::default())
+                .insert(Transform::from_translation(quadrant_offset))
+                .with_children(|parent| {
+                    let padding = 5.;
+                    let offset = quadrant_translation / 5. + padding;
+                    parent
+                        .spawn_bundle(make_mound_bundle(Color::WHITE, -2. * offset))
+                        .insert(Name::new("Mound 1"));
+
+                    parent
+                        .spawn()
+                        .insert(Name::new("Mound 2"))
+                        .insert(GlobalTransform::default())
+                        .insert(Transform::default())
+                        .with_children(|parent| {
+                            let color = Color::DARK_GREEN;
+                            parent
+                                .spawn_bundle(make_mound_bundle(color, Vec2::ZERO))
+                                .insert(Name::new("Mound 2.1"));
+
+                            parent
+                                .spawn_bundle(make_mound_bundle(color, 2. * offset))
+                                .insert(Name::new("Mound 2.2"));
+                        });
+                });
         });
 }
 
@@ -31,12 +63,14 @@ trait CommandExtension<'w, 's, 'a> {
     ) -> EntityCommands<'w, 's, '_>;
 }
 
+const HOLE_LINE_WIDTH: f32 = 4.0;
+
 fn make_hole_bundle(outline_color: Color, position: (f32, f32)) -> impl Bundle {
     GeometryBuilder::build_as(
         &get_hole_shape(),
         DrawMode::Outlined {
             fill_mode: FillMode::color(Color::BLACK),
-            outline_mode: StrokeMode::new(outline_color, 4.0),
+            outline_mode: StrokeMode::new(outline_color, HOLE_LINE_WIDTH),
         },
         Transform::from_xyz(position.0, position.1, 1.0),
     )
@@ -47,4 +81,15 @@ fn get_hole_shape() -> impl Geometry {
         radius: 20.0,
         center: Vec2::ZERO,
     }
+}
+
+fn make_mound_bundle(fill_color: Color, transform: Vec2) -> impl Bundle {
+    GeometryBuilder::build_as(
+        &get_hole_shape(),
+        DrawMode::Outlined {
+            fill_mode: FillMode::color(fill_color),
+            outline_mode: StrokeMode::new(Color::BLACK, HOLE_LINE_WIDTH),
+        },
+        Transform::from_xyz(transform.x, transform.y, 1.),
+    )
 }
