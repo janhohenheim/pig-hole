@@ -1,3 +1,4 @@
+use crate::player::Player;
 use crate::GameState;
 use bevy::prelude::*;
 #[cfg(feature = "dev")]
@@ -12,6 +13,12 @@ pub struct PigId {
     pub outer: u8,
     pub inner: u8,
     pub occupied: bool,
+}
+
+#[cfg_attr(feature = "dev", derive(Inspectable))]
+#[derive(Clone, Copy, Eq, PartialEq, PartialOrd, Ord, Debug, Hash, Component)]
+pub struct Ghost {
+    active: bool,
 }
 
 impl PigId {
@@ -37,7 +44,10 @@ impl Plugin for BoardPlugin {
     fn build(&self, app: &mut App) {
         app.add_system_set(SystemSet::on_enter(GameState::Playing).with_system(spawn_board))
             .add_system_set(
-                SystemSet::on_update(GameState::Playing).with_system(update_pig_visibility),
+                SystemSet::on_update(GameState::Playing)
+                    .with_system(update_pig_visibility)
+                    .with_system(update_ghost_visibility)
+                    .with_system(activate_ghosts),
             );
         #[cfg(feature = "dev")]
         {
@@ -302,14 +312,41 @@ fn create_mound(
                 .spawn_bundle(make_pig_bundle())
                 .insert(pig_id)
                 .insert(Name::new(format!("Pig {}.{}", pig_id.outer, pig_id.inner)))
-                .insert(Visibility { is_visible: false });
+                .insert(Visibility { is_visible: false })
+                .with_children(|parent| {
+                    parent
+                        .spawn_bundle(make_ghost_bundle())
+                        .insert(Name::new(format!(
+                            "Ghost {}.{}",
+                            pig_id.outer, pig_id.inner
+                        )))
+                        .insert(Visibility { is_visible: false })
+                        .insert(Ghost { active: false });
+                });
         });
+}
+
+fn make_ghost_bundle() -> impl Bundle {
+    let color = Color::TURQUOISE;
+    GeometryBuilder::build_as(
+        &shapes::Circle {
+            radius: 28.0,
+            ..default()
+        },
+        DrawMode::Fill(FillMode::color(Color::Rgba {
+            red: color.r(),
+            green: color.g(),
+            blue: color.b(),
+            alpha: 0.3,
+        })),
+        Transform::from_xyz(0., 0., -2.),
+    )
 }
 
 fn make_pig_bundle() -> impl Bundle {
     GeometryBuilder::build_as(
         &shapes::Circle {
-            radius: 15.0,
+            radius: 17.0,
             ..default()
         },
         DrawMode::Outlined {
@@ -355,5 +392,38 @@ fn update_pig_visibility(mut pig_id_query: Query<(&mut PigId, &mut Visibility)>)
             pig_id.occupied = false;
         }
         visibility.is_visible = pig_id.occupied;
+    }
+}
+
+fn update_ghost_visibility(mut ghost_query: Query<(&Ghost, &mut Visibility)>) {
+    for (ghost, mut visibility) in ghost_query.iter_mut() {
+        visibility.is_visible = ghost.active;
+    }
+}
+
+fn activate_ghosts(
+    pig_id_query: Query<(Entity, &PigId)>,
+    mut ghost_query: Query<(&Parent, &mut Ghost)>,
+    player_query: Query<&Player>,
+) {
+    for player in player_query.iter() {
+        match player.state {
+            crate::player::PlayerState::Selecting(outer_mould_index) => {
+                for (pig_entity, &pig_id) in pig_id_query.iter() {
+                    if pig_id.outer == outer_mould_index {
+                        for (parent, mut ghost) in ghost_query.iter_mut() {
+                            if parent.0 == pig_entity {
+                                ghost.active = true;
+                            }
+                        }
+                    }
+                }
+            }
+            crate::player::PlayerState::ThrowingDice() => {
+                for (_parent, mut ghost) in ghost_query.iter_mut() {
+                    ghost.active = false
+                }
+            }
+        }
     }
 }

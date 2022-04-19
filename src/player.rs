@@ -46,13 +46,18 @@ impl Plugin for PlayerPlugin {
 }
 
 fn spawn_camera(mut commands: Commands) {
-    commands.spawn_bundle(OrthographicCameraBundle::new_2d());
+    commands
+        .spawn_bundle(OrthographicCameraBundle::new_2d())
+        .insert(Name::new("Camera"));
 }
 
 fn spawn_player(mut commands: Commands) {
-    commands.spawn().insert(Player {
-        state: PlayerState::Selecting(3),
-    });
+    commands
+        .spawn()
+        .insert(Player {
+            state: PlayerState::Selecting(3),
+        })
+        .insert(Name::new("Player"));
 }
 
 fn place_pig(
