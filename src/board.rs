@@ -27,6 +27,27 @@ fn spawn_board(mut commands: Commands) {
         .insert(Transform::default())
         .with_children(|parent| {
             parent
+                .spawn()
+                .insert(Name::new("Border"))
+                .insert(GlobalTransform::default())
+                .insert(Transform::default())
+                .with_children(|parent| {
+                    parent
+                        .spawn_bundle(make_border_bundle(Vec2::new(
+                            2. * board_size.x + 3. * padding,
+                            2. * board_size.y + 3. * padding,
+                        )))
+                        .insert(Name::new("Inner border"));
+
+                    parent
+                        .spawn_bundle(make_border_bundle(Vec2::new(
+                            2. * board_size.x + 4. * padding,
+                            2. * board_size.y + 4. * padding,
+                        )))
+                        .insert(Name::new("Outer border"));
+                });
+
+            parent
                 .spawn_bundle(make_hole_bundle(Color::GOLD, (0., 0.)))
                 .insert(Name::new("Pig Hole"));
 
@@ -192,5 +213,16 @@ fn make_mound_bundle(fill_color: Color, transform: Vec2) -> impl Bundle {
             outline_mode: StrokeMode::new(Color::BLACK, HOLE_LINE_WIDTH),
         },
         Transform::from_xyz(transform.x, transform.y, 1.),
+    )
+}
+
+fn make_border_bundle(extents: Vec2) -> impl Bundle {
+    GeometryBuilder::build_as(
+        &shapes::Rectangle {
+            extents,
+            ..default()
+        },
+        DrawMode::Stroke(StrokeMode::new(Color::BLACK, HOLE_LINE_WIDTH)),
+        Transform::default(),
     )
 }
