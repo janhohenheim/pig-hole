@@ -1,6 +1,28 @@
 use crate::GameState;
-use bevy::{ecs::system::EntityCommands, prelude::*};
+use bevy::prelude::*;
+#[cfg(feature = "dev")]
+use bevy_inspector_egui::Inspectable;
 use bevy_prototype_lyon::prelude::*;
+
+#[derive(Clone, Copy, Eq, PartialEq, PartialOrd, Ord, Debug, Hash, Component)]
+#[cfg_attr(feature = "dev", Inspectable)]
+pub struct MouldId {
+    pub outer: u8,
+    pub inner: u8,
+}
+
+impl MouldId {
+    pub fn new(outer: u8, inner: u8) -> Self {
+        if inner > outer {
+            panic!("inner cannot be greater than outer");
+        }
+        if outer > 6 {
+            panic!("outer cannot be greater than 6");
+        }
+
+        Self { outer, inner }
+    }
+}
 
 pub struct BoardPlugin;
 
@@ -49,12 +71,13 @@ fn spawn_board(mut commands: Commands) {
 
             parent
                 .spawn_bundle(make_hole_bundle(Color::GOLD, (0., 0.)))
-                .insert(Name::new("Pig Hole"));
+                .insert(Name::new("Pig hole"))
+                .insert(MouldId::new(6, 1));
 
             let top_right_offset = quadrant_offset;
             parent
                 .spawn()
-                .insert(Name::new("Top Right"))
+                .insert(Name::new("Top right"))
                 .insert(GlobalTransform::default())
                 .insert(Transform::from_translation(top_right_offset))
                 .with_children(|parent| {
@@ -71,10 +94,12 @@ fn spawn_board(mut commands: Commands) {
                             let color = Color::DARK_GREEN;
                             parent
                                 .spawn_bundle(make_mound_bundle(color, Vec2::ZERO))
+                                .insert(MouldId::new(2, 1))
                                 .insert(Name::new("Mound 2.1"));
 
                             parent
                                 .spawn_bundle(make_mound_bundle(color, 2. * offset_right))
+                                .insert(MouldId::new(2, 2))
                                 .insert(Name::new("Mound 2.2"));
                         });
                 });
@@ -82,7 +107,7 @@ fn spawn_board(mut commands: Commands) {
             let top_left_offset = Vec3::new(-quadrant_offset.x, quadrant_offset.y, 0.);
             parent
                 .spawn()
-                .insert(Name::new("Top Left"))
+                .insert(Name::new("Top left"))
                 .insert(GlobalTransform::default())
                 .insert(Transform::from_translation(top_left_offset))
                 .with_children(|parent| {
@@ -95,14 +120,17 @@ fn spawn_board(mut commands: Commands) {
                             let color = Color::YELLOW;
                             parent
                                 .spawn_bundle(make_mound_bundle(color, 2. * offset_left))
+                                .insert(MouldId::new(3, 1))
                                 .insert(Name::new("Mound 3.1"));
 
                             parent
                                 .spawn_bundle(make_mound_bundle(color, Vec2::ZERO))
+                                .insert(MouldId::new(3, 2))
                                 .insert(Name::new("Mound 3.2"));
 
                             parent
                                 .spawn_bundle(make_mound_bundle(color, -2. * offset_left))
+                                .insert(MouldId::new(3, 3))
                                 .insert(Name::new("Mound 3.3"));
                         });
                 });
@@ -110,7 +138,7 @@ fn spawn_board(mut commands: Commands) {
             let bottom_left_offset = Vec3::new(-quadrant_offset.x, -quadrant_offset.y, 0.);
             parent
                 .spawn()
-                .insert(Name::new("Bottom Left"))
+                .insert(Name::new("Bottom left"))
                 .insert(GlobalTransform::default())
                 .insert(Transform::from_translation(bottom_left_offset))
                 .with_children(|parent| {
@@ -123,18 +151,22 @@ fn spawn_board(mut commands: Commands) {
                             let color = Color::BLUE;
                             parent
                                 .spawn_bundle(make_mound_bundle(color, 2. * offset_right))
+                                .insert(MouldId::new(4, 1))
                                 .insert(Name::new("Mound 4.1"));
 
                             parent
                                 .spawn_bundle(make_mound_bundle(color, 2. * offset_left))
+                                .insert(MouldId::new(4, 2))
                                 .insert(Name::new("Mound 4.2"));
 
                             parent
                                 .spawn_bundle(make_mound_bundle(color, -2. * offset_right))
+                                .insert(MouldId::new(4, 3))
                                 .insert(Name::new("Mound 4.3"));
 
                             parent
                                 .spawn_bundle(make_mound_bundle(color, -2. * offset_left))
+                                .insert(MouldId::new(4, 4))
                                 .insert(Name::new("Mound 4.4"));
                         });
                 });
@@ -142,7 +174,7 @@ fn spawn_board(mut commands: Commands) {
             let bottom_right_offset = Vec3::new(quadrant_offset.x, -quadrant_offset.y, 0.);
             parent
                 .spawn()
-                .insert(Name::new("Bottom Right"))
+                .insert(Name::new("Bottom right"))
                 .insert(GlobalTransform::default())
                 .insert(Transform::from_translation(bottom_right_offset))
                 .with_children(|parent| {
@@ -155,22 +187,27 @@ fn spawn_board(mut commands: Commands) {
                             let color = Color::RED;
                             parent
                                 .spawn_bundle(make_mound_bundle(color, 2. * offset_right))
+                                .insert(MouldId::new(5, 1))
                                 .insert(Name::new("Mound 5.1"));
 
                             parent
                                 .spawn_bundle(make_mound_bundle(color, 2. * offset_left))
+                                .insert(MouldId::new(5, 2))
                                 .insert(Name::new("Mound 5.2"));
 
                             parent
                                 .spawn_bundle(make_mound_bundle(color, -2. * offset_right))
+                                .insert(MouldId::new(5, 3))
                                 .insert(Name::new("Mound 5.3"));
 
                             parent
                                 .spawn_bundle(make_mound_bundle(color, -2. * offset_left))
+                                .insert(MouldId::new(5, 4))
                                 .insert(Name::new("Mound 5.4"));
 
                             parent
                                 .spawn_bundle(make_mound_bundle(color, Vec2::ZERO))
+                                .insert(MouldId::new(5, 5))
                                 .insert(Name::new("Mound 5.5"));
                         });
                 });
