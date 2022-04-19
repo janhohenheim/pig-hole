@@ -6,6 +6,7 @@ use bevy::DefaultPlugins;
 use bevy_game::GamePlugin;
 #[cfg(feature = "dev")]
 use bevy_inspector_egui::WorldInspectorPlugin;
+use bevy_prototype_lyon::prelude::*;
 
 fn main() {
     let mut app = App::new();
@@ -17,7 +18,8 @@ fn main() {
             title: "Bevy game".to_string(), // ToDo
             ..Default::default()
         })
-        .add_plugins(DefaultPlugins);
+        .add_plugins(DefaultPlugins)
+        .add_plugin(ShapePlugin);
 
     #[cfg(feature = "dev")]
     app.add_plugin(WorldInspectorPlugin::new());
