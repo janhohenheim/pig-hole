@@ -36,6 +36,7 @@ fn move_player(
     actions: Res<Actions>,
     mut player_query: Query<&mut Transform, With<Player>>,
 ) {
+    /*
     if actions.player_movement.is_none() {
         return;
     }
@@ -48,4 +49,5 @@ fn move_player(
     for mut player_transform in player_query.iter_mut() {
         player_transform.translation += movement;
     }
+    */
 }
