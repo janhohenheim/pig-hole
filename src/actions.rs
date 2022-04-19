@@ -1,4 +1,5 @@
 use crate::{board::PigId, GameState};
+use bevy::log;
 use bevy::prelude::*;
 
 pub struct ActionsPlugin;
@@ -27,13 +28,18 @@ fn set_mouse_actions(
     let window = windows.get_primary().expect("No primary window found");
     if mouse_input.just_pressed(MouseButton::Left) {
         actions.selected_mould = if let Some(position) = window.cursor_position() {
+            let world_position = Vec2::new(
+                position.x - window.width() / 2.,
+                position.y - window.height() / 2.,
+            );
+
             let mut closest_mould = None;
             for (transform, pig_id) in mould_position_query.iter() {
                 const RADIUS: f32 = 20.0;
-                if position.x <= transform.translation.x + RADIUS
-                    && position.x >= transform.translation.x - RADIUS
-                    && position.y <= transform.translation.y + RADIUS
-                    && position.y >= transform.translation.y - RADIUS
+                if world_position.x <= transform.translation.x + RADIUS
+                    && world_position.x >= transform.translation.x - RADIUS
+                    && world_position.y <= transform.translation.y + RADIUS
+                    && world_position.y >= transform.translation.y - RADIUS
                 {
                     closest_mould = Some(*pig_id);
                     break;
