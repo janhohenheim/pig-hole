@@ -177,14 +177,6 @@ fn spawn_board(mut commands: Commands) {
         });
 }
 
-trait CommandExtension<'w, 's, 'a> {
-    fn spawn_hole(
-        &'a mut self,
-        outline_color: Color,
-        position: (f32, f32),
-    ) -> EntityCommands<'w, 's, '_>;
-}
-
 const HOLE_LINE_WIDTH: f32 = 4.0;
 
 fn make_hole_bundle(outline_color: Color, position: (f32, f32)) -> impl Bundle {
