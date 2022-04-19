@@ -8,12 +8,12 @@ use bevy_prototype_lyon::prelude::*;
 
 #[cfg_attr(feature = "dev", derive(Inspectable))]
 #[derive(Clone, Copy, Eq, PartialEq, PartialOrd, Ord, Debug, Hash, Component)]
-pub struct MouldId {
+pub struct PigId {
     pub outer: u8,
     pub inner: u8,
 }
 
-impl MouldId {
+impl PigId {
     pub fn new(outer: u8, inner: u8) -> Self {
         if inner > outer {
             panic!("inner cannot be greater than outer");
@@ -33,7 +33,7 @@ impl Plugin for BoardPlugin {
         app.add_system_set(SystemSet::on_enter(GameState::Playing).with_system(spawn_board));
         #[cfg(feature = "dev")]
         {
-            app.register_inspectable::<MouldId>();
+            app.register_inspectable::<PigId>();
         }
     }
 }
@@ -74,11 +74,13 @@ fn spawn_board(mut commands: Commands) {
                         )))
                         .insert(Name::new("Outer border"));
                 });
-
-            parent
-                .spawn_bundle(make_hole_bundle(Color::GOLD, (0., 0.)))
-                .insert(Name::new("Pig hole"))
-                .insert(MouldId::new(6, 1));
+            create_mound(
+                parent,
+                PigId::new(6, 1),
+                Vec2::new(0., 0.),
+                Color::GOLD,
+                Color::BLACK,
+            );
 
             let top_right_offset = quadrant_offset;
             parent
@@ -87,9 +89,13 @@ fn spawn_board(mut commands: Commands) {
                 .insert(GlobalTransform::default())
                 .insert(Transform::from_translation(top_right_offset))
                 .with_children(|parent| {
-                    parent
-                        .spawn_bundle(make_mound_bundle(Color::WHITE, -2. * offset_right))
-                        .insert(Name::new("Mound 1"));
+                    create_mound(
+                        parent,
+                        PigId::new(1, 1),
+                        -2. * offset_right,
+                        Color::WHITE,
+                        Color::GRAY,
+                    );
 
                     parent
                         .spawn()
@@ -97,16 +103,22 @@ fn spawn_board(mut commands: Commands) {
                         .insert(GlobalTransform::default())
                         .insert(Transform::default())
                         .with_children(|parent| {
-                            let color = Color::DARK_GREEN;
-                            parent
-                                .spawn_bundle(make_mound_bundle(color, Vec2::ZERO))
-                                .insert(MouldId::new(2, 1))
-                                .insert(Name::new("Mound 2.1"));
-
-                            parent
-                                .spawn_bundle(make_mound_bundle(color, 2. * offset_right))
-                                .insert(MouldId::new(2, 2))
-                                .insert(Name::new("Mound 2.2"));
+                            let inner_color = Color::DARK_GREEN;
+                            let outer_color = Color::GREEN;
+                            create_mound(
+                                parent,
+                                PigId::new(2, 1),
+                                Vec2::ZERO,
+                                outer_color,
+                                inner_color,
+                            );
+                            create_mound(
+                                parent,
+                                PigId::new(2, 2),
+                                2. * offset_right,
+                                outer_color,
+                                inner_color,
+                            );
                         });
                 });
 
@@ -123,21 +135,32 @@ fn spawn_board(mut commands: Commands) {
                         .insert(GlobalTransform::default())
                         .insert(Transform::default())
                         .with_children(|parent| {
-                            let color = Color::YELLOW;
-                            parent
-                                .spawn_bundle(make_mound_bundle(color, 2. * offset_left))
-                                .insert(MouldId::new(3, 1))
-                                .insert(Name::new("Mound 3.1"));
+                            let outer_color = Color::YELLOW;
+                            let inner_color = Color::ORANGE;
 
-                            parent
-                                .spawn_bundle(make_mound_bundle(color, Vec2::ZERO))
-                                .insert(MouldId::new(3, 2))
-                                .insert(Name::new("Mound 3.2"));
+                            create_mound(
+                                parent,
+                                PigId::new(3, 1),
+                                2. * offset_left,
+                                outer_color,
+                                inner_color,
+                            );
 
-                            parent
-                                .spawn_bundle(make_mound_bundle(color, -2. * offset_left))
-                                .insert(MouldId::new(3, 3))
-                                .insert(Name::new("Mound 3.3"));
+                            create_mound(
+                                parent,
+                                PigId::new(3, 2),
+                                Vec2::ZERO,
+                                outer_color,
+                                inner_color,
+                            );
+
+                            create_mound(
+                                parent,
+                                PigId::new(3, 3),
+                                -2. * offset_left,
+                                outer_color,
+                                inner_color,
+                            );
                         });
                 });
 
@@ -154,26 +177,40 @@ fn spawn_board(mut commands: Commands) {
                         .insert(GlobalTransform::default())
                         .insert(Transform::default())
                         .with_children(|parent| {
-                            let color = Color::BLUE;
-                            parent
-                                .spawn_bundle(make_mound_bundle(color, 2. * offset_right))
-                                .insert(MouldId::new(4, 1))
-                                .insert(Name::new("Mound 4.1"));
+                            let outer_color = Color::AQUAMARINE;
+                            let inner_color = Color::BLUE;
 
-                            parent
-                                .spawn_bundle(make_mound_bundle(color, 2. * offset_left))
-                                .insert(MouldId::new(4, 2))
-                                .insert(Name::new("Mound 4.2"));
+                            create_mound(
+                                parent,
+                                PigId::new(4, 1),
+                                2. * offset_right,
+                                outer_color,
+                                inner_color,
+                            );
 
-                            parent
-                                .spawn_bundle(make_mound_bundle(color, -2. * offset_right))
-                                .insert(MouldId::new(4, 3))
-                                .insert(Name::new("Mound 4.3"));
+                            create_mound(
+                                parent,
+                                PigId::new(4, 2),
+                                2. * offset_left,
+                                outer_color,
+                                inner_color,
+                            );
 
-                            parent
-                                .spawn_bundle(make_mound_bundle(color, -2. * offset_left))
-                                .insert(MouldId::new(4, 4))
-                                .insert(Name::new("Mound 4.4"));
+                            create_mound(
+                                parent,
+                                PigId::new(4, 3),
+                                -2. * offset_right,
+                                outer_color,
+                                inner_color,
+                            );
+
+                            create_mound(
+                                parent,
+                                PigId::new(4, 4),
+                                -2. * offset_left,
+                                outer_color,
+                                inner_color,
+                            );
                         });
                 });
 
@@ -190,31 +227,48 @@ fn spawn_board(mut commands: Commands) {
                         .insert(GlobalTransform::default())
                         .insert(Transform::default())
                         .with_children(|parent| {
-                            let color = Color::RED;
-                            parent
-                                .spawn_bundle(make_mound_bundle(color, 2. * offset_right))
-                                .insert(MouldId::new(5, 1))
-                                .insert(Name::new("Mound 5.1"));
+                            let outer_color = Color::SALMON;
+                            let inner_color = Color::RED;
 
-                            parent
-                                .spawn_bundle(make_mound_bundle(color, 2. * offset_left))
-                                .insert(MouldId::new(5, 2))
-                                .insert(Name::new("Mound 5.2"));
+                            create_mound(
+                                parent,
+                                PigId::new(5, 1),
+                                2. * offset_right,
+                                outer_color,
+                                inner_color,
+                            );
 
-                            parent
-                                .spawn_bundle(make_mound_bundle(color, -2. * offset_right))
-                                .insert(MouldId::new(5, 3))
-                                .insert(Name::new("Mound 5.3"));
+                            create_mound(
+                                parent,
+                                PigId::new(5, 2),
+                                2. * offset_left,
+                                outer_color,
+                                inner_color,
+                            );
 
-                            parent
-                                .spawn_bundle(make_mound_bundle(color, -2. * offset_left))
-                                .insert(MouldId::new(5, 4))
-                                .insert(Name::new("Mound 5.4"));
+                            create_mound(
+                                parent,
+                                PigId::new(5, 3),
+                                -2. * offset_right,
+                                outer_color,
+                                inner_color,
+                            );
 
-                            parent
-                                .spawn_bundle(make_mound_bundle(color, Vec2::ZERO))
-                                .insert(MouldId::new(5, 5))
-                                .insert(Name::new("Mound 5.5"));
+                            create_mound(
+                                parent,
+                                PigId::new(5, 4),
+                                -2. * offset_left,
+                                outer_color,
+                                inner_color,
+                            );
+
+                            create_mound(
+                                parent,
+                                PigId::new(5, 5),
+                                Vec2::ZERO,
+                                outer_color,
+                                inner_color,
+                            );
                         });
                 });
         });
@@ -222,30 +276,55 @@ fn spawn_board(mut commands: Commands) {
 
 const HOLE_LINE_WIDTH: f32 = 4.0;
 
-fn make_hole_bundle(outline_color: Color, position: (f32, f32)) -> impl Bundle {
+fn create_mound(
+    parent: &mut ChildBuilder,
+    pig_id: PigId,
+    position: Vec2,
+    outer_color: Color,
+    inner_color: Color,
+) {
+    parent
+        .spawn_bundle(make_mound_bundle(outer_color, inner_color, position))
+        .insert(Name::new(format!(
+            "Mound {}.{}",
+            pig_id.outer, pig_id.inner
+        )))
+        .with_children(|parent| {
+            parent
+                .spawn_bundle(make_pig_bundle())
+                .insert(pig_id)
+                .insert(Name::new(format!("Pig {}.{}", pig_id.outer, pig_id.inner)))
+                .insert(Visibility { is_visible: false });
+        });
+}
+
+fn make_pig_bundle() -> impl Bundle {
     GeometryBuilder::build_as(
-        &get_hole_shape(),
-        DrawMode::Outlined {
-            fill_mode: FillMode::color(Color::BLACK),
-            outline_mode: StrokeMode::new(outline_color, HOLE_LINE_WIDTH),
+        &shapes::Circle {
+            radius: 15.0,
+            ..default()
         },
-        Transform::from_xyz(position.0, position.1, 1.0),
+        DrawMode::Outlined {
+            fill_mode: FillMode::color(Color::PINK),
+            outline_mode: StrokeMode::new(Color::WHITE, 2.0),
+        },
+        Transform::from_xyz(0., 0., 2.),
     )
 }
 
 fn get_hole_shape() -> impl Geometry {
     shapes::Circle {
         radius: 20.0,
-        center: Vec2::ZERO,
+        ..default()
     }
 }
 
-fn make_mound_bundle(fill_color: Color, transform: Vec2) -> impl Bundle {
+fn make_mound_bundle(outer_color: Color, inner_color: Color, transform: Vec2) -> impl Bundle {
     GeometryBuilder::build_as(
         &get_hole_shape(),
         DrawMode::Outlined {
-            fill_mode: FillMode::color(fill_color),
-            outline_mode: StrokeMode::new(Color::BLACK, HOLE_LINE_WIDTH),
+            fill_mode: FillMode::color(inner_color),
+            outline_mode: StrokeMode::new(outer_color, HOLE_LINE_WIDTH),
         },
         Transform::from_xyz(transform.x, transform.y, 1.),
     )
