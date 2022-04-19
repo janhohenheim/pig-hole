@@ -3,6 +3,7 @@ use bevy::prelude::*;
 #[cfg(feature = "dev")]
 use bevy_editor_pls::prelude::*;
 
+
 #[cfg(debug_assertions)]
 use bevy::diagnostic::LogDiagnosticsPlugin;
 
@@ -14,8 +15,7 @@ impl Plugin for DevPlugin {
     fn build(&self, app: &mut App) {
         #[cfg(feature = "dev")]
         {
-            app //.add_plugin(WorldInspectorPlugin::new())
-                .add_plugin(EditorPlugin);
+            app.add_plugin(EditorPlugin);
         }
         #[cfg(debug_assertions)]
         {

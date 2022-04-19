@@ -2,10 +2,12 @@ use crate::GameState;
 use bevy::prelude::*;
 #[cfg(feature = "dev")]
 use bevy_inspector_egui::Inspectable;
+#[cfg(feature = "dev")]
+use bevy_inspector_egui::RegisterInspectable;
 use bevy_prototype_lyon::prelude::*;
 
+#[cfg_attr(feature = "dev", derive(Inspectable))]
 #[derive(Clone, Copy, Eq, PartialEq, PartialOrd, Ord, Debug, Hash, Component)]
-#[cfg_attr(feature = "dev", Inspectable)]
 pub struct MouldId {
     pub outer: u8,
     pub inner: u8,
@@ -29,6 +31,10 @@ pub struct BoardPlugin;
 impl Plugin for BoardPlugin {
     fn build(&self, app: &mut App) {
         app.add_system_set(SystemSet::on_enter(GameState::Playing).with_system(spawn_board));
+        #[cfg(feature = "dev")]
+        {
+            app.register_inspectable::<MouldId>();
+        }
     }
 }
 
