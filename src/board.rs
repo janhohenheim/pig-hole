@@ -11,6 +11,7 @@ use bevy_prototype_lyon::prelude::*;
 pub struct PigId {
     pub outer: u8,
     pub inner: u8,
+    pub occupied: bool,
 }
 
 impl PigId {
@@ -22,7 +23,11 @@ impl PigId {
             panic!("outer cannot be greater than 6");
         }
 
-        Self { outer, inner }
+        Self {
+            outer,
+            inner,
+            occupied: false,
+        }
     }
 }
 
@@ -30,7 +35,10 @@ pub struct BoardPlugin;
 
 impl Plugin for BoardPlugin {
     fn build(&self, app: &mut App) {
-        app.add_system_set(SystemSet::on_enter(GameState::Playing).with_system(spawn_board));
+        app.add_system_set(SystemSet::on_enter(GameState::Playing).with_system(spawn_board))
+            .add_system_set(
+                SystemSet::on_update(GameState::Playing).with_system(update_pig_visibility),
+            );
         #[cfg(feature = "dev")]
         {
             app.register_inspectable::<PigId>();
@@ -339,4 +347,13 @@ fn make_border_bundle(extents: Vec2) -> impl Bundle {
         DrawMode::Stroke(StrokeMode::new(Color::BLACK, HOLE_LINE_WIDTH)),
         Transform::default(),
     )
+}
+
+fn update_pig_visibility(mut pig_id_query: Query<(&mut PigId, &mut Visibility)>) {
+    for (mut pig_id, mut visibility) in pig_id_query.iter_mut() {
+        if pig_id.outer == 6 {
+            pig_id.occupied = false;
+        }
+        visibility.is_visible = pig_id.occupied;
+    }
 }
