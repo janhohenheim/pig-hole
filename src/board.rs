@@ -29,6 +29,12 @@ impl PigId {
         if outer > 6 {
             panic!("outer cannot be greater than 6");
         }
+        if outer == 0 {
+            panic!("outer cannot be 0");
+        }
+        if inner == 0 {
+            panic!("inner cannot be 0");
+        }
 
         Self {
             outer,
