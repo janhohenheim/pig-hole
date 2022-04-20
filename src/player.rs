@@ -92,7 +92,7 @@ fn place_pig(
 }
 
 fn find_mut_pig<'a>(needle: &Pig, haystack: &'a mut Query<&mut Pig>) -> Option<Mut<'a, Pig>> {
-    haystack.iter_mut().filter(|pig| **pig == *needle).next()
+    haystack.iter_mut().find(|pig| **pig == *needle)
 }
 
 fn is_valid_for_placement(pig: &Pig, outer_trough_number: u8) -> bool {
