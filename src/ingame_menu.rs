@@ -10,7 +10,9 @@ impl Plugin for IngameMenuPlugin {
         app.init_resource::<ButtonColors>()
             .add_system_set(SystemSet::on_enter(GameState::Playing).with_system(setup_menu))
             .add_system_set(
-                SystemSet::on_update(GameState::Playing).with_system(click_dice_button),
+                SystemSet::on_update(GameState::Playing)
+                    .with_system(click_dice_button)
+                    .with_system(update_button_for_state),
             );
     }
 }
@@ -32,7 +34,7 @@ impl Default for ButtonColors {
 }
 
 #[derive(Debug, Copy, Clone, Default, PartialEq, Eq, Hash, Component)]
-struct DiceRollButton;
+struct DiceRollNode;
 
 fn setup_menu(
     mut commands: Commands,
@@ -69,23 +71,25 @@ fn setup_menu(
                     ..default()
                 })
                 .with_children(|parent| {
-                    parent.spawn_bundle(TextBundle {
-                        text: Text {
-                            sections: vec![TextSection {
-                                value: "Roll dice".to_string(),
-                                style: TextStyle {
-                                    font: font_assets.fira_sans.clone(),
-                                    font_size: 40.0,
-                                    color: Color::rgb(0.9, 0.9, 0.9),
-                                },
-                            }],
-                            alignment: Default::default(),
-                        },
-                        ..default()
-                    });
+                    parent
+                        .spawn_bundle(TextBundle {
+                            text: Text {
+                                sections: vec![TextSection {
+                                    value: "Roll dice".to_string(),
+                                    style: TextStyle {
+                                        font: font_assets.fira_sans.clone(),
+                                        font_size: 40.0,
+                                        color: Color::rgb(0.9, 0.9, 0.9),
+                                    },
+                                }],
+                                alignment: Default::default(),
+                            },
+                            ..default()
+                        })
+                        .insert(DiceRollNode);
                 })
                 .insert(Name::new("Dice roll button"))
-                .insert(DiceRollButton);
+                .insert(DiceRollNode);
         });
 }
 
@@ -93,25 +97,18 @@ fn setup_menu(
 fn click_dice_button(
     button_colors: Res<ButtonColors>,
     mut interaction_query: Query<
-        (Entity, &Interaction, &mut UiColor),
-        (Changed<Interaction>, (With<Button>, With<DiceRollButton>)),
+        (&Interaction, &mut UiColor),
+        (Changed<Interaction>, (With<Button>, With<DiceRollNode>)),
     >,
     mut player_query: Query<&mut Player>,
-    mut text_query: Query<(&Parent, &mut Text)>,
 ) {
-    for (entity, interaction, mut color) in interaction_query.iter_mut() {
+    for (interaction, mut color) in interaction_query.iter_mut() {
         for mut player in player_query.iter_mut() {
             match *interaction {
                 Interaction::Clicked => match player.state {
                     PlayerState::Selecting(_) => (),
                     PlayerState::ThrowingDice() => {
-                        let roll = player.throw_dice();
-                        for (parent, mut text) in text_query.iter_mut() {
-                            if parent.0 == entity {
-                                text.sections[0].value = format!("Rolled a {}", roll);
-                            }
-                        }
-                        *color = button_colors.inactive;
+                        player.throw_dice();
                     }
                 },
                 Interaction::Hovered => match player.state {
@@ -122,6 +119,34 @@ fn click_dice_button(
                     PlayerState::Selecting(_) => *color = button_colors.inactive,
                     PlayerState::ThrowingDice() => *color = button_colors.normal,
                 },
+            }
+        }
+    }
+}
+
+fn update_button_for_state(
+    button_colors: Res<ButtonColors>,
+    player_query: Query<&Player, Changed<Player>>,
+    mut text_query: Query<&mut Text, With<DiceRollNode>>,
+    mut color_query: Query<&mut UiColor, (With<Button>, With<DiceRollNode>)>,
+) {
+    for player in player_query.iter() {
+        match player.state {
+            PlayerState::Selecting(roll) => {
+                for mut text in text_query.iter_mut() {
+                    text.sections[0].value = format!("Rolled a {}", roll);
+                }
+                for mut color in color_query.iter_mut() {
+                    *color = button_colors.inactive;
+                }
+            }
+            PlayerState::ThrowingDice() => {
+                for mut text in text_query.iter_mut() {
+                    text.sections[0].value = format!("Roll dice");
+                }
+                for mut color in color_query.iter_mut() {
+                    *color = button_colors.normal;
+                }
             }
         }
     }
