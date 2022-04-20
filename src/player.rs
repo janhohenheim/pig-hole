@@ -14,6 +14,16 @@ pub struct PlayerPlugin;
 #[cfg_attr(feature = "dev", derive(Inspectable))]
 pub struct Player {
     pub state: PlayerState,
+    pub pig_count: u32,
+}
+
+impl Default for Player {
+    fn default() -> Self {
+        Player {
+            state: PlayerState::Thinking(),
+            pig_count: 10,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
@@ -60,9 +70,7 @@ fn spawn_camera(mut commands: Commands) {
 fn spawn_player(mut commands: Commands) {
     commands
         .spawn()
-        .insert(Player {
-            state: PlayerState::Thinking(),
-        })
+        .insert(Player::default())
         .insert(Name::new("Player"));
 }
 
@@ -79,6 +87,7 @@ fn select_pig(
                         if is_valid_for_placement(&pig, group) {
                             pig.status = PigStatus::Occupied;
                             player.state = PlayerState::Thinking();
+                            player.pig_count = player.pig_count.saturating_sub(1);
                             clear_ghosts(&mut pig_query);
                         }
                     }
@@ -103,6 +112,7 @@ fn select_pig(
                             pig.status = PigStatus::Empty;
                             player.state = PlayerState::Thinking();
                         }
+                        player.pig_count = player.pig_count.saturating_add(group as u32);
                     }
                 } else if let Some(hovered_pig) = actions.hovered_trough {
                     if hovered_pig.trough.group != group {
