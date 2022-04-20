@@ -1,5 +1,6 @@
 use crate::actions::Actions;
 use crate::board::PigId;
+use crate::board::PigStatus;
 use crate::GameState;
 use bevy::prelude::*;
 #[cfg(feature = "dev")]
@@ -71,9 +72,9 @@ fn place_pig(
                     for mut pig_id in pig_query.iter_mut() {
                         if *pig_id == selected_pig_id
                             && selected_pig_id.outer == outer_mould_index
-                            && selected_pig_id.occupied == false
+                            && selected_pig_id.status != PigStatus::Occupied
                         {
-                            pig_id.occupied = true;
+                            pig_id.status = PigStatus::Occupied;
                             player.state = PlayerState::ThrowingDice();
                         }
                     }

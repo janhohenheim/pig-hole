@@ -9,10 +9,18 @@ use bevy_prototype_lyon::prelude::*;
 
 #[cfg_attr(feature = "dev", derive(Inspectable))]
 #[derive(Clone, Copy, Eq, PartialEq, PartialOrd, Ord, Debug, Hash, Component)]
+pub enum PigStatus {
+    Empty,
+    Occupied,
+    Ghost,
+}
+
+#[cfg_attr(feature = "dev", derive(Inspectable))]
+#[derive(Clone, Copy, Eq, PartialEq, PartialOrd, Ord, Debug, Hash, Component)]
 pub struct PigId {
     pub outer: u8,
     pub inner: u8,
-    pub occupied: bool,
+    pub status: PigStatus,
 }
 
 #[cfg_attr(feature = "dev", derive(Inspectable))]
@@ -39,7 +47,7 @@ impl PigId {
         Self {
             outer,
             inner,
-            occupied: false,
+            status: PigStatus::Empty,
         }
     }
 }
@@ -392,13 +400,41 @@ fn make_border_bundle(extents: Vec2) -> impl Bundle {
     )
 }
 
-fn update_pig_visibility(mut pig_id_query: Query<(&mut PigId, &mut Visibility)>) {
-    for (mut pig_id, mut visibility) in pig_id_query.iter_mut() {
-        if pig_id.outer == 6 {
-            pig_id.occupied = false;
+fn update_pig_visibility(mut pig_id_query: Query<(&mut PigId, &mut DrawMode, &mut Visibility)>) {
+    for (mut pig_id, draw_mode, mut visibility) in pig_id_query.iter_mut() {
+        if pig_id.outer == 6 && pig_id.status == PigStatus::Occupied {
+            pig_id.status = PigStatus::Empty;
         }
-        visibility.is_visible = pig_id.occupied;
+        match pig_id.status {
+            PigStatus::Empty => visibility.is_visible = false,
+            PigStatus::Occupied => {
+                visibility.is_visible = true;
+                set_alpha(draw_mode, 1.0);
+            }
+            PigStatus::Ghost => {
+                visibility.is_visible = true;
+                set_alpha(draw_mode, 0.2);
+            }
+        }
     }
+}
+
+fn set_alpha(draw_mode: Mut<DrawMode>, alpha: f32) {
+    match *draw_mode {
+        DrawMode::Fill(mut fill_mode) => {
+            fill_mode.color.set_a(alpha);
+        }
+        DrawMode::Stroke(mut stroke_mode) => {
+            stroke_mode.color.set_a(alpha);
+        }
+        DrawMode::Outlined {
+            mut fill_mode,
+            mut outline_mode,
+        } => {
+            fill_mode.color.set_a(alpha);
+            outline_mode.color.set_a(alpha);
+        }
+    };
 }
 
 fn update_highlight_visibility(mut highlight_query: Query<(&Highlight, &mut Visibility)>) {
@@ -416,7 +452,7 @@ fn activate_highlights(
         match player.state {
             crate::player::PlayerState::Selecting(outer_mould_index) => {
                 for (pig_entity, &pig_id) in pig_id_query.iter() {
-                    if pig_id.outer == outer_mould_index && pig_id.occupied == false {
+                    if pig_id.outer == outer_mould_index && pig_id.status != PigStatus::Occupied {
                         for (parent, mut highlight) in highlight_query.iter_mut() {
                             if parent.0 == pig_entity {
                                 highlight.active = true;
