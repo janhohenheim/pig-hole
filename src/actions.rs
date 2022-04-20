@@ -16,7 +16,7 @@ impl Plugin for ActionsPlugin {
 #[derive(Default)]
 pub struct Actions {
     pub hovered_trough: Option<Pig>,
-    pub selected_trough: Option<Pig>,
+    pub selected_pig: Option<Pig>,
 }
 
 fn set_mouse_actions(
@@ -25,12 +25,12 @@ fn set_mouse_actions(
     windows: Res<Windows>,
     trough_position_query: Query<(&GlobalTransform, &Pig)>,
 ) {
-    if actions.selected_trough.is_some() {
-        actions.selected_trough = None;
+    if actions.selected_pig.is_some() {
+        actions.selected_pig = None;
     }
     let window = windows.get_primary().expect("No primary window found");
     if mouse_input.just_pressed(MouseButton::Left) {
-        actions.selected_trough = get_pig_under_cursor(trough_position_query, window);
+        actions.selected_pig = get_pig_under_cursor(trough_position_query, window);
     } else {
         actions.hovered_trough = get_pig_under_cursor(trough_position_query, window);
     }

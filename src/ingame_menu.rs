@@ -106,18 +106,24 @@ fn click_dice_button(
         for mut player in player_query.iter_mut() {
             match *interaction {
                 Interaction::Clicked => match player.state {
-                    PlayerState::Selecting(_) => (),
-                    PlayerState::ThrowingDice() => {
-                        player.throw_dice();
+                    PlayerState::PlacingInGroup(_)
+                    | PlayerState::CollectingGroup(_)
+                    | PlayerState::ThrowingDice() => (),
+                    PlayerState::Thinking() => {
+                        player.state = PlayerState::ThrowingDice();
                     }
                 },
                 Interaction::Hovered => match player.state {
-                    PlayerState::Selecting(_) => (),
-                    PlayerState::ThrowingDice() => *color = button_colors.hovered,
+                    PlayerState::PlacingInGroup(_)
+                    | PlayerState::CollectingGroup(_)
+                    | PlayerState::ThrowingDice() => (),
+                    PlayerState::Thinking() => *color = button_colors.hovered,
                 },
                 Interaction::None => match player.state {
-                    PlayerState::Selecting(_) => *color = button_colors.inactive,
-                    PlayerState::ThrowingDice() => *color = button_colors.normal,
+                    PlayerState::PlacingInGroup(_)
+                    | PlayerState::CollectingGroup(_)
+                    | PlayerState::ThrowingDice() => *color = button_colors.inactive,
+                    PlayerState::Thinking() => *color = button_colors.normal,
                 },
             }
         }
@@ -132,7 +138,7 @@ fn update_button_for_state(
 ) {
     for player in player_query.iter() {
         match player.state {
-            PlayerState::Selecting(roll) => {
+            PlayerState::PlacingInGroup(roll) => {
                 for mut text in text_query.iter_mut() {
                     text.sections[0].value = format!("Rolled a {}", roll);
                 }
@@ -140,7 +146,16 @@ fn update_button_for_state(
                     *color = button_colors.inactive;
                 }
             }
-            PlayerState::ThrowingDice() => {
+            PlayerState::CollectingGroup(roll) => {
+                for mut text in text_query.iter_mut() {
+                    text.sections[0].value = format!("Rolled a {}\nCollect", roll);
+                }
+                for mut color in color_query.iter_mut() {
+                    *color = button_colors.inactive;
+                }
+            }
+            PlayerState::ThrowingDice() => (),
+            PlayerState::Thinking() => {
                 for mut text in text_query.iter_mut() {
                     text.sections[0].value = format!("Roll dice");
                 }

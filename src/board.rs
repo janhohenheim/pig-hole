@@ -2,6 +2,7 @@ use std::fmt::Display;
 
 use crate::loading::BoardAssetCreator;
 use crate::player::Player;
+use crate::player::PlayerState;
 use crate::GameState;
 use bevy::prelude::*;
 #[cfg(feature = "dev")]
@@ -15,7 +16,8 @@ use bevy_prototype_lyon::prelude::*;
 pub enum PigStatus {
     Empty,
     Occupied,
-    Ghost,
+    PlacementGhost,
+    RemovalGhost,
 }
 
 #[cfg_attr(feature = "dev", derive(Inspectable))]
@@ -34,7 +36,7 @@ impl Pig {
     }
 
     pub fn is_occupied(&self) -> bool {
-        self.status == PigStatus::Occupied
+        self.status == PigStatus::Occupied || self.status == PigStatus::RemovalGhost
     }
 }
 #[cfg_attr(feature = "dev", derive(Inspectable))]
@@ -316,9 +318,12 @@ fn update_pig_visibility(mut pig_query: Query<(&mut Pig, &mut DrawMode, &mut Vis
                 visibility.is_visible = true;
                 *draw_mode = with_alpha(&draw_mode, 1.0);
             }
-            PigStatus::Ghost => {
+            PigStatus::PlacementGhost => {
                 visibility.is_visible = true;
                 *draw_mode = with_alpha(&draw_mode, 0.5);
+            }
+            PigStatus::RemovalGhost => {
+                *draw_mode = with_alpha(&draw_mode, 0.6);
             }
         }
     }
@@ -361,9 +366,9 @@ fn activate_highlights(
 ) {
     for player in player_query.iter() {
         match player.state {
-            crate::player::PlayerState::Selecting(outer_trough_number) => {
+            PlayerState::PlacingInGroup(group) => {
                 for (pig_entity, &pig) in pig_query.iter() {
-                    if pig.trough.group == outer_trough_number && !pig.is_occupied() {
+                    if pig.trough.group == group && !pig.is_occupied() {
                         for (parent, mut highlight) in highlight_query.iter_mut() {
                             if parent.0 == pig_entity {
                                 highlight.active = true;
@@ -372,11 +377,23 @@ fn activate_highlights(
                     }
                 }
             }
-            crate::player::PlayerState::ThrowingDice() => {
+            PlayerState::CollectingGroup(group) => {
+                for (pig_entity, &pig) in pig_query.iter() {
+                    if pig.trough.group == group {
+                        for (parent, mut highlight) in highlight_query.iter_mut() {
+                            if parent.0 == pig_entity {
+                                highlight.active = true;
+                            }
+                        }
+                    }
+                }
+            }
+            PlayerState::Thinking() => {
                 for (_parent, mut highlight) in highlight_query.iter_mut() {
                     highlight.active = false
                 }
             }
+            PlayerState::ThrowingDice() => (),
         }
     }
 }
