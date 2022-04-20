@@ -96,7 +96,7 @@ fn find_mut_pig<'a>(needle: &Pig, haystack: &'a mut Query<&mut Pig>) -> Option<M
 }
 
 fn is_valid_for_placement(pig: &Pig, outer_trough_number: u8) -> bool {
-    pig.trough.outer_number == outer_trough_number && pig.status != PigStatus::Occupied
+    pig.trough.outer_number == outer_trough_number && !pig.is_occupied()
 }
 
 fn clear_ghosts(pig_query: &mut Query<&mut Pig>) {

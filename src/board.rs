@@ -31,6 +31,10 @@ impl Pig {
             status: PigStatus::Empty,
         }
     }
+
+    pub fn is_occupied(&self) -> bool {
+        self.status == PigStatus::Occupied
+    }
 }
 #[cfg_attr(feature = "dev", derive(Inspectable))]
 #[derive(Clone, Copy, Eq, PartialEq, PartialOrd, Ord, Debug, Hash, Component)]
@@ -426,7 +430,7 @@ fn make_border_bundle(extents: Vec2) -> impl Bundle {
 
 fn update_pig_visibility(mut pig_query: Query<(&mut Pig, &mut DrawMode, &mut Visibility)>) {
     for (mut pig, mut draw_mode, mut visibility) in pig_query.iter_mut() {
-        if pig.trough.outer_number == 6 && pig.status == PigStatus::Occupied {
+        if pig.trough.outer_number == 6 && pig.is_occupied() {
             pig.status = PigStatus::Empty;
         }
         match pig.status {
@@ -482,9 +486,7 @@ fn activate_highlights(
         match player.state {
             crate::player::PlayerState::Selecting(outer_trough_number) => {
                 for (pig_entity, &pig) in pig_query.iter() {
-                    if pig.trough.outer_number == outer_trough_number
-                        && pig.status != PigStatus::Occupied
-                    {
+                    if pig.trough.outer_number == outer_trough_number && !pig.is_occupied() {
                         for (parent, mut highlight) in highlight_query.iter_mut() {
                             if parent.0 == pig_entity {
                                 highlight.active = true;
