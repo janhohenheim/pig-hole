@@ -39,22 +39,19 @@ impl Pig {
 #[cfg_attr(feature = "dev", derive(Inspectable))]
 #[derive(Clone, Copy, Eq, PartialEq, PartialOrd, Ord, Debug, Hash, Component)]
 pub struct Trough {
-    pub outer_number: u8,
-    pub inner_number: u8,
+    pub group: u8,
+    pub index: u8,
 }
 
 impl From<(u8, u8)> for Trough {
-    fn from((outer_number, inner_number): (u8, u8)) -> Self {
-        Self {
-            outer_number,
-            inner_number,
-        }
+    fn from((group, index): (u8, u8)) -> Self {
+        Self { group, index }
     }
 }
 
 impl Display for Trough {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}.{}", self.outer_number, self.inner_number)
+        write!(f, "{}.{}", self.group, self.index)
     }
 }
 #[cfg_attr(feature = "dev", derive(Inspectable))]
@@ -64,24 +61,21 @@ pub struct Highlight {
 }
 
 impl Trough {
-    pub fn new(outer_number: u8, inner_number: u8) -> Self {
-        if inner_number > outer_number {
+    pub fn new(group: u8, index: u8) -> Self {
+        if index > group {
             panic!("inner cannot be greater than outer");
         }
-        if outer_number > 6 {
+        if group > 6 {
             panic!("outer cannot be greater than 6");
         }
-        if outer_number == 0 {
+        if group == 0 {
             panic!("outer cannot be 0");
         }
-        if inner_number == 0 {
+        if index == 0 {
             panic!("inner cannot be 0");
         }
 
-        Self {
-            outer_number,
-            inner_number,
-        }
+        Self { group, index }
     }
 }
 
@@ -430,7 +424,7 @@ fn make_border_bundle(extents: Vec2) -> impl Bundle {
 
 fn update_pig_visibility(mut pig_query: Query<(&mut Pig, &mut DrawMode, &mut Visibility)>) {
     for (mut pig, mut draw_mode, mut visibility) in pig_query.iter_mut() {
-        if pig.trough.outer_number == 6 && pig.is_occupied() {
+        if pig.trough.group == 6 && pig.is_occupied() {
             pig.status = PigStatus::Empty;
         }
         match pig.status {
@@ -486,7 +480,7 @@ fn activate_highlights(
         match player.state {
             crate::player::PlayerState::Selecting(outer_trough_number) => {
                 for (pig_entity, &pig) in pig_query.iter() {
-                    if pig.trough.outer_number == outer_trough_number && !pig.is_occupied() {
+                    if pig.trough.group == outer_trough_number && !pig.is_occupied() {
                         for (parent, mut highlight) in highlight_query.iter_mut() {
                             if parent.0 == pig_entity {
                                 highlight.active = true;
