@@ -2,6 +2,7 @@ mod actions;
 mod audio;
 mod board;
 mod dev;
+mod ingame_menu;
 mod loading;
 mod menu;
 mod player;
@@ -10,6 +11,7 @@ use crate::actions::ActionsPlugin;
 use crate::audio::InternalAudioPlugin;
 use crate::board::BoardPlugin;
 use crate::dev::DevPlugin;
+use crate::ingame_menu::IngameMenuPlugin;
 use crate::loading::LoadingPlugin;
 use crate::menu::MenuPlugin;
 use crate::player::PlayerPlugin;
@@ -41,6 +43,7 @@ impl Plugin for GamePlugin {
             .add_plugin(InternalAudioPlugin)
             .add_plugin(PlayerPlugin)
             .add_plugin(BoardPlugin)
+            .add_plugin(IngameMenuPlugin)
             .add_plugin(DevPlugin);
     }
 }

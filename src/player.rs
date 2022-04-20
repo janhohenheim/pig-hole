@@ -7,6 +7,7 @@ use bevy::prelude::*;
 use bevy_inspector_egui::Inspectable;
 #[cfg(feature = "dev")]
 use bevy_inspector_egui::RegisterInspectable;
+use rand::Rng;
 pub struct PlayerPlugin;
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash, Component)]
@@ -20,6 +21,14 @@ pub struct Player {
 pub enum PlayerState {
     Selecting(u8),
     ThrowingDice(),
+}
+
+impl Player {
+    pub fn throw_dice(&mut self) -> u8 {
+        let roll = rand::thread_rng().gen_range(1..=6);
+        self.state = PlayerState::Selecting(roll);
+        roll
+    }
 }
 
 #[derive(Debug, Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash)]
@@ -54,7 +63,7 @@ fn spawn_player(mut commands: Commands) {
     commands
         .spawn()
         .insert(Player {
-            state: PlayerState::Selecting(3),
+            state: PlayerState::ThrowingDice(),
         })
         .insert(Name::new("Player"));
 }
