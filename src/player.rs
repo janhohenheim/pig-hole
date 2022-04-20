@@ -2,12 +2,12 @@ use crate::actions::Actions;
 use crate::board::PigId;
 use crate::board::PigStatus;
 use crate::GameState;
+use bevy::log;
 use bevy::prelude::*;
 #[cfg(feature = "dev")]
 use bevy_inspector_egui::Inspectable;
 #[cfg(feature = "dev")]
 use bevy_inspector_egui::RegisterInspectable;
-
 pub struct PlayerPlugin;
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash, Component)]
@@ -73,21 +73,19 @@ fn place_pig(
                         if is_valid_for_placement(&pig, outer_mould_index) {
                             pig.status = PigStatus::Occupied;
                             player.state = PlayerState::ThrowingDice();
+                            clear_ghosts(&mut pig_query);
                         }
                     }
-                }
-                if let Some(hovered_pig_id) = actions.hovered_mould {
-                    for mut pig in pig_query
-                        .iter_mut()
-                        .filter(|pig| **pig != hovered_pig_id && pig.status == PigStatus::Ghost)
-                    {
-                        pig.status = PigStatus::Empty;
-                    }
+                } else if let Some(hovered_pig_id) = actions.hovered_mould {
                     if let Some(mut pig) = find_mut_pig_id(&hovered_pig_id, &mut pig_query) {
                         if is_valid_for_placement(&pig, outer_mould_index) {
                             pig.status = PigStatus::Ghost;
+                            log::info!("Ghost pig: {:?}", hovered_pig_id);
                         }
                     }
+                    clear_ghosts_except(&mut pig_query, &hovered_pig_id);
+                } else {
+                    clear_ghosts(&mut pig_query);
                 }
             }
             PlayerState::ThrowingDice() => (),
@@ -107,4 +105,23 @@ fn find_mut_pig_id<'a>(
 
 fn is_valid_for_placement(pig_id: &PigId, outer_mould_index: u8) -> bool {
     pig_id.outer == outer_mould_index && pig_id.status != PigStatus::Occupied
+}
+
+fn clear_ghosts(pig_query: &mut Query<&mut PigId>) {
+    for mut pig in pig_query
+        .iter_mut()
+        .filter(|pig| pig.status == PigStatus::Ghost)
+    {
+        pig.status = PigStatus::Empty;
+    }
+}
+
+fn clear_ghosts_except(pig_query: &mut Query<&mut PigId>, exception: &PigId) {
+    for mut pig in pig_query.iter_mut().filter(|pig| {
+        pig.status == PigStatus::Ghost
+            && pig.outer != exception.outer
+            && pig.inner != exception.inner
+    }) {
+        pig.status = PigStatus::Empty;
+    }
 }

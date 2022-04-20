@@ -401,7 +401,7 @@ fn make_border_bundle(extents: Vec2) -> impl Bundle {
 }
 
 fn update_pig_visibility(mut pig_id_query: Query<(&mut PigId, &mut DrawMode, &mut Visibility)>) {
-    for (mut pig_id, draw_mode, mut visibility) in pig_id_query.iter_mut() {
+    for (mut pig_id, mut draw_mode, mut visibility) in pig_id_query.iter_mut() {
         if pig_id.outer == 6 && pig_id.status == PigStatus::Occupied {
             pig_id.status = PigStatus::Empty;
         }
@@ -409,23 +409,25 @@ fn update_pig_visibility(mut pig_id_query: Query<(&mut PigId, &mut DrawMode, &mu
             PigStatus::Empty => visibility.is_visible = false,
             PigStatus::Occupied => {
                 visibility.is_visible = true;
-                set_alpha(draw_mode, 1.0);
+                *draw_mode = with_alpha(&draw_mode, 1.0);
             }
             PigStatus::Ghost => {
                 visibility.is_visible = true;
-                set_alpha(draw_mode, 0.2);
+                *draw_mode = with_alpha(&draw_mode, 0.5);
             }
         }
     }
 }
 
-fn set_alpha(draw_mode: Mut<DrawMode>, alpha: f32) {
+fn with_alpha(draw_mode: &DrawMode, alpha: f32) -> DrawMode {
     match *draw_mode {
         DrawMode::Fill(mut fill_mode) => {
             fill_mode.color.set_a(alpha);
+            DrawMode::Fill(fill_mode)
         }
         DrawMode::Stroke(mut stroke_mode) => {
             stroke_mode.color.set_a(alpha);
+            DrawMode::Stroke(stroke_mode)
         }
         DrawMode::Outlined {
             mut fill_mode,
@@ -433,8 +435,12 @@ fn set_alpha(draw_mode: Mut<DrawMode>, alpha: f32) {
         } => {
             fill_mode.color.set_a(alpha);
             outline_mode.color.set_a(alpha);
+            DrawMode::Outlined {
+                fill_mode,
+                outline_mode,
+            }
         }
-    };
+    }
 }
 
 fn update_highlight_visibility(mut highlight_query: Query<(&Highlight, &mut Visibility)>) {

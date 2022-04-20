@@ -25,6 +25,9 @@ fn set_mouse_actions(
     windows: Res<Windows>,
     mould_position_query: Query<(&GlobalTransform, &PigId)>,
 ) {
+    if actions.selected_mould.is_some() {
+        actions.selected_mould = None;
+    }
     let window = windows.get_primary().expect("No primary window found");
     if mouse_input.just_pressed(MouseButton::Left) {
         actions.selected_mould = get_pig_id_under_cursor(mould_position_query, window);
