@@ -17,7 +17,7 @@ pub struct PigId {
 
 #[cfg_attr(feature = "dev", derive(Inspectable))]
 #[derive(Clone, Copy, Eq, PartialEq, PartialOrd, Ord, Debug, Hash, Component)]
-pub struct Ghost {
+pub struct Highlight {
     active: bool,
 }
 
@@ -52,8 +52,8 @@ impl Plugin for BoardPlugin {
             .add_system_set(
                 SystemSet::on_update(GameState::Playing)
                     .with_system(update_pig_visibility)
-                    .with_system(update_ghost_visibility)
-                    .with_system(activate_ghosts),
+                    .with_system(update_highlight_visibility)
+                    .with_system(activate_highlights),
             );
         #[cfg(feature = "dev")]
         {
@@ -321,18 +321,18 @@ fn create_mound(
                 .insert(Visibility { is_visible: false })
                 .with_children(|parent| {
                     parent
-                        .spawn_bundle(make_ghost_bundle())
+                        .spawn_bundle(make_highlight_bundle())
                         .insert(Name::new(format!(
-                            "Ghost {}.{}",
+                            "Highlight {}.{}",
                             pig_id.outer, pig_id.inner
                         )))
                         .insert(Visibility { is_visible: false })
-                        .insert(Ghost { active: false });
+                        .insert(Highlight { active: false });
                 });
         });
 }
 
-fn make_ghost_bundle() -> impl Bundle {
+fn make_highlight_bundle() -> impl Bundle {
     let color = Color::TURQUOISE;
     GeometryBuilder::build_as(
         &shapes::Circle {
@@ -401,33 +401,33 @@ fn update_pig_visibility(mut pig_id_query: Query<(&mut PigId, &mut Visibility)>)
     }
 }
 
-fn update_ghost_visibility(mut ghost_query: Query<(&Ghost, &mut Visibility)>) {
-    for (ghost, mut visibility) in ghost_query.iter_mut() {
-        visibility.is_visible = ghost.active;
+fn update_highlight_visibility(mut highlight_query: Query<(&Highlight, &mut Visibility)>) {
+    for (highlight, mut visibility) in highlight_query.iter_mut() {
+        visibility.is_visible = highlight.active;
     }
 }
 
-fn activate_ghosts(
+fn activate_highlights(
     pig_id_query: Query<(Entity, &PigId)>,
-    mut ghost_query: Query<(&Parent, &mut Ghost)>,
+    mut highlight_query: Query<(&Parent, &mut Highlight)>,
     player_query: Query<&Player>,
 ) {
     for player in player_query.iter() {
         match player.state {
             crate::player::PlayerState::Selecting(outer_mould_index) => {
                 for (pig_entity, &pig_id) in pig_id_query.iter() {
-                    if pig_id.outer == outer_mould_index {
-                        for (parent, mut ghost) in ghost_query.iter_mut() {
+                    if pig_id.outer == outer_mould_index && pig_id.occupied == false {
+                        for (parent, mut highlight) in highlight_query.iter_mut() {
                             if parent.0 == pig_entity {
-                                ghost.active = true;
+                                highlight.active = true;
                             }
                         }
                     }
                 }
             }
             crate::player::PlayerState::ThrowingDice() => {
-                for (_parent, mut ghost) in ghost_query.iter_mut() {
-                    ghost.active = false
+                for (_parent, mut highlight) in highlight_query.iter_mut() {
+                    highlight.active = false
                 }
             }
         }
