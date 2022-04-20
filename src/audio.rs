@@ -23,7 +23,7 @@ fn start_audio(audio_assets: Res<AudioAssets>, audio: Res<Audio>) {
     audio.pause();
 }
 
-fn control_flying_sound(actions: Res<Actions>, audio: Res<Audio>) {
+fn control_flying_sound(_actions: Res<Actions>, _audio: Res<Audio>) {
     /*
     if actions.player_movement.is_some() {
         audio.resume();
