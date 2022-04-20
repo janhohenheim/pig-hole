@@ -2,7 +2,6 @@ use crate::actions::Actions;
 use crate::board::PigId;
 use crate::board::PigStatus;
 use crate::GameState;
-use bevy::log;
 use bevy::prelude::*;
 #[cfg(feature = "dev")]
 use bevy_inspector_egui::Inspectable;
@@ -80,7 +79,6 @@ fn place_pig(
                     if let Some(mut pig) = find_mut_pig_id(&hovered_pig_id, &mut pig_query) {
                         if is_valid_for_placement(&pig, outer_mould_index) {
                             pig.status = PigStatus::Ghost;
-                            log::info!("Ghost pig: {:?}", hovered_pig_id);
                         }
                     }
                     clear_ghosts_except(&mut pig_query, &hovered_pig_id);
@@ -119,8 +117,7 @@ fn clear_ghosts(pig_query: &mut Query<&mut PigId>) {
 fn clear_ghosts_except(pig_query: &mut Query<&mut PigId>, exception: &PigId) {
     for mut pig in pig_query.iter_mut().filter(|pig| {
         pig.status == PigStatus::Ghost
-            && pig.outer != exception.outer
-            && pig.inner != exception.inner
+            && !(pig.outer == exception.outer && pig.inner == exception.inner)
     }) {
         pig.status = PigStatus::Empty;
     }
