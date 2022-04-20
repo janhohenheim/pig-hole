@@ -69,13 +69,23 @@ fn place_pig(
         match player.state {
             PlayerState::Selecting(outer_mould_index) => {
                 if let Some(selected_pig_id) = actions.selected_mould {
-                    for mut pig_id in pig_query.iter_mut() {
-                        if *pig_id == selected_pig_id
-                            && selected_pig_id.outer == outer_mould_index
-                            && selected_pig_id.status != PigStatus::Occupied
-                        {
-                            pig_id.status = PigStatus::Occupied;
+                    if let Some(mut pig) = find_mut_pig_id(&selected_pig_id, &mut pig_query) {
+                        if is_valid_for_placement(&pig, outer_mould_index) {
+                            pig.status = PigStatus::Occupied;
                             player.state = PlayerState::ThrowingDice();
+                        }
+                    }
+                }
+                if let Some(hovered_pig_id) = actions.hovered_mould {
+                    for mut pig in pig_query
+                        .iter_mut()
+                        .filter(|pig| **pig != hovered_pig_id && pig.status == PigStatus::Ghost)
+                    {
+                        pig.status = PigStatus::Empty;
+                    }
+                    if let Some(mut pig) = find_mut_pig_id(&hovered_pig_id, &mut pig_query) {
+                        if is_valid_for_placement(&pig, outer_mould_index) {
+                            pig.status = PigStatus::Ghost;
                         }
                     }
                 }
@@ -83,4 +93,18 @@ fn place_pig(
             PlayerState::ThrowingDice() => (),
         }
     }
+}
+
+fn find_mut_pig_id<'a>(
+    needle: &PigId,
+    haystack: &'a mut Query<&mut PigId>,
+) -> Option<Mut<'a, PigId>> {
+    haystack
+        .iter_mut()
+        .filter(|pig_id| **pig_id == *needle)
+        .next()
+}
+
+fn is_valid_for_placement(pig_id: &PigId, outer_mould_index: u8) -> bool {
+    pig_id.outer == outer_mould_index && pig_id.status != PigStatus::Occupied
 }

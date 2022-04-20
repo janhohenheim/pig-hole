@@ -15,6 +15,7 @@ impl Plugin for ActionsPlugin {
 
 #[derive(Default)]
 pub struct Actions {
+    pub hovered_mould: Option<PigId>,
     pub selected_mould: Option<PigId>,
 }
 
@@ -26,27 +27,38 @@ fn set_mouse_actions(
 ) {
     let window = windows.get_primary().expect("No primary window found");
     if mouse_input.just_pressed(MouseButton::Left) {
-        actions.selected_mould = if let Some(position) = window.cursor_position() {
-            let world_position = Vec2::new(
-                position.x - window.width() / 2.,
-                position.y - window.height() / 2.,
-            );
+        actions.selected_mould = get_pig_id_under_cursor(mould_position_query, window);
+    } else {
+        actions.hovered_mould = get_pig_id_under_cursor(mould_position_query, window);
+    }
+}
 
-            let mut closest_mould = None;
-            for (transform, pig_id) in mould_position_query.iter() {
-                const RADIUS: f32 = 20.0;
-                if world_position.x <= transform.translation.x + RADIUS
-                    && world_position.x >= transform.translation.x - RADIUS
-                    && world_position.y <= transform.translation.y + RADIUS
-                    && world_position.y >= transform.translation.y - RADIUS
-                {
-                    closest_mould = Some(*pig_id);
-                    break;
-                }
+fn get_cursor_world_position(window: &Window) -> Option<Vec2> {
+    window.cursor_position().map(|position| {
+        Vec2::new(
+            position.x - window.width() / 2.,
+            position.y - window.height() / 2.,
+        )
+    })
+}
+
+fn get_pig_id_under_cursor(
+    mould_position_query: Query<(&GlobalTransform, &PigId)>,
+    window: &Window,
+) -> Option<PigId> {
+    if let Some(position) = get_cursor_world_position(window) {
+        for (transform, pig_id) in mould_position_query.iter() {
+            const RADIUS: f32 = 20.0;
+            if position.x <= transform.translation.x + RADIUS
+                && position.x >= transform.translation.x - RADIUS
+                && position.y <= transform.translation.y + RADIUS
+                && position.y >= transform.translation.y - RADIUS
+            {
+                return Some(*pig_id);
             }
-            closest_mould
-        } else {
-            None
         }
+        None
+    } else {
+        None
     }
 }
