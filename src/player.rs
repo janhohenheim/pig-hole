@@ -1,5 +1,5 @@
 use crate::actions::Actions;
-use crate::board::PigId;
+use crate::board::Pig;
 use crate::board::PigStatus;
 use crate::GameState;
 use bevy::prelude::*;
@@ -23,7 +23,7 @@ pub enum PlayerState {
 }
 
 #[derive(Debug, Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash)]
-pub struct OuterMouldIndex(u8);
+pub struct OuterTroughIndex(u8);
 
 /// This plugin handles player related stuff like movement
 /// Player logic is only active during the State `GameState::Playing`
@@ -60,28 +60,28 @@ fn spawn_player(mut commands: Commands) {
 }
 
 fn place_pig(
-    mut pig_query: Query<&mut PigId>,
+    mut pig_query: Query<&mut Pig>,
     actions: Res<Actions>,
     mut player_query: Query<&mut Player>,
 ) {
     for mut player in player_query.iter_mut() {
         match player.state {
-            PlayerState::Selecting(outer_mould_index) => {
-                if let Some(selected_pig_id) = actions.selected_mould {
-                    if let Some(mut pig) = find_mut_pig_id(&selected_pig_id, &mut pig_query) {
-                        if is_valid_for_placement(&pig, outer_mould_index) {
+            PlayerState::Selecting(outer_trough_number) => {
+                if let Some(selected_pig) = actions.selected_trough {
+                    if let Some(mut pig) = find_mut_pig(&selected_pig, &mut pig_query) {
+                        if is_valid_for_placement(&pig, outer_trough_number) {
                             pig.status = PigStatus::Occupied;
                             player.state = PlayerState::ThrowingDice();
                             clear_ghosts(&mut pig_query);
                         }
                     }
-                } else if let Some(hovered_pig_id) = actions.hovered_mould {
-                    if let Some(mut pig) = find_mut_pig_id(&hovered_pig_id, &mut pig_query) {
-                        if is_valid_for_placement(&pig, outer_mould_index) {
+                } else if let Some(hovered_pig) = actions.hovered_trough {
+                    if let Some(mut pig) = find_mut_pig(&hovered_pig, &mut pig_query) {
+                        if is_valid_for_placement(&pig, outer_trough_number) {
                             pig.status = PigStatus::Ghost;
                         }
                     }
-                    clear_ghosts_except(&mut pig_query, &hovered_pig_id);
+                    clear_ghosts_except(&mut pig_query, &hovered_pig);
                 } else {
                     clear_ghosts(&mut pig_query);
                 }
@@ -91,21 +91,15 @@ fn place_pig(
     }
 }
 
-fn find_mut_pig_id<'a>(
-    needle: &PigId,
-    haystack: &'a mut Query<&mut PigId>,
-) -> Option<Mut<'a, PigId>> {
-    haystack
-        .iter_mut()
-        .filter(|pig_id| **pig_id == *needle)
-        .next()
+fn find_mut_pig<'a>(needle: &Pig, haystack: &'a mut Query<&mut Pig>) -> Option<Mut<'a, Pig>> {
+    haystack.iter_mut().filter(|pig| **pig == *needle).next()
 }
 
-fn is_valid_for_placement(pig_id: &PigId, outer_mould_index: u8) -> bool {
-    pig_id.outer == outer_mould_index && pig_id.status != PigStatus::Occupied
+fn is_valid_for_placement(pig: &Pig, outer_trough_number: u8) -> bool {
+    pig.trough.outer_number == outer_trough_number && pig.status != PigStatus::Occupied
 }
 
-fn clear_ghosts(pig_query: &mut Query<&mut PigId>) {
+fn clear_ghosts(pig_query: &mut Query<&mut Pig>) {
     for mut pig in pig_query
         .iter_mut()
         .filter(|pig| pig.status == PigStatus::Ghost)
@@ -114,11 +108,11 @@ fn clear_ghosts(pig_query: &mut Query<&mut PigId>) {
     }
 }
 
-fn clear_ghosts_except(pig_query: &mut Query<&mut PigId>, exception: &PigId) {
-    for mut pig in pig_query.iter_mut().filter(|pig| {
-        pig.status == PigStatus::Ghost
-            && !(pig.outer == exception.outer && pig.inner == exception.inner)
-    }) {
+fn clear_ghosts_except(pig_query: &mut Query<&mut Pig>, exception: &Pig) {
+    for mut pig in pig_query
+        .iter_mut()
+        .filter(|pig| pig.status == PigStatus::Ghost && pig.trough != exception.trough)
+    {
         pig.status = PigStatus::Empty;
     }
 }

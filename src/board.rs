@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use crate::player::Player;
 use crate::GameState;
 use bevy::prelude::*;
@@ -17,37 +19,64 @@ pub enum PigStatus {
 
 #[cfg_attr(feature = "dev", derive(Inspectable))]
 #[derive(Clone, Copy, Eq, PartialEq, PartialOrd, Ord, Debug, Hash, Component)]
-pub struct PigId {
-    pub outer: u8,
-    pub inner: u8,
+pub struct Pig {
+    pub trough: Trough,
     pub status: PigStatus,
 }
 
+impl Pig {
+    pub fn in_trough(trough: Trough) -> Self {
+        Self {
+            trough,
+            status: PigStatus::Empty,
+        }
+    }
+}
+#[cfg_attr(feature = "dev", derive(Inspectable))]
+#[derive(Clone, Copy, Eq, PartialEq, PartialOrd, Ord, Debug, Hash, Component)]
+pub struct Trough {
+    pub outer_number: u8,
+    pub inner_number: u8,
+}
+
+impl From<(u8, u8)> for Trough {
+    fn from((outer_number, inner_number): (u8, u8)) -> Self {
+        Self {
+            outer_number,
+            inner_number,
+        }
+    }
+}
+
+impl Display for Trough {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}.{}", self.outer_number, self.inner_number)
+    }
+}
 #[cfg_attr(feature = "dev", derive(Inspectable))]
 #[derive(Clone, Copy, Eq, PartialEq, PartialOrd, Ord, Debug, Hash, Component)]
 pub struct Highlight {
     active: bool,
 }
 
-impl PigId {
-    pub fn new(outer: u8, inner: u8) -> Self {
-        if inner > outer {
+impl Trough {
+    pub fn new(outer_number: u8, inner_number: u8) -> Self {
+        if inner_number > outer_number {
             panic!("inner cannot be greater than outer");
         }
-        if outer > 6 {
+        if outer_number > 6 {
             panic!("outer cannot be greater than 6");
         }
-        if outer == 0 {
+        if outer_number == 0 {
             panic!("outer cannot be 0");
         }
-        if inner == 0 {
+        if inner_number == 0 {
             panic!("inner cannot be 0");
         }
 
         Self {
-            outer,
-            inner,
-            status: PigStatus::Empty,
+            outer_number,
+            inner_number,
         }
     }
 }
@@ -65,7 +94,7 @@ impl Plugin for BoardPlugin {
             );
         #[cfg(feature = "dev")]
         {
-            app.register_inspectable::<PigId>();
+            app.register_inspectable::<Pig>();
         }
     }
 }
@@ -106,9 +135,9 @@ fn spawn_board(mut commands: Commands) {
                         )))
                         .insert(Name::new("Outer border"));
                 });
-            create_mound(
+            create_trough(
                 parent,
-                PigId::new(6, 1),
+                Trough::new(6, 1),
                 Vec2::new(0., 0.),
                 Color::GOLD,
                 Color::BLACK,
@@ -121,9 +150,9 @@ fn spawn_board(mut commands: Commands) {
                 .insert(GlobalTransform::default())
                 .insert(Transform::from_translation(top_right_offset))
                 .with_children(|parent| {
-                    create_mound(
+                    create_trough(
                         parent,
-                        PigId::new(1, 1),
+                        Trough::new(1, 1),
                         -2. * offset_right,
                         Color::WHITE,
                         Color::GRAY,
@@ -131,22 +160,22 @@ fn spawn_board(mut commands: Commands) {
 
                     parent
                         .spawn()
-                        .insert(Name::new("Mound 2"))
+                        .insert(Name::new("Trough 2"))
                         .insert(GlobalTransform::default())
                         .insert(Transform::default())
                         .with_children(|parent| {
                             let inner_color = Color::DARK_GREEN;
                             let outer_color = Color::GREEN;
-                            create_mound(
+                            create_trough(
                                 parent,
-                                PigId::new(2, 1),
+                                Trough::new(2, 1),
                                 Vec2::ZERO,
                                 outer_color,
                                 inner_color,
                             );
-                            create_mound(
+                            create_trough(
                                 parent,
-                                PigId::new(2, 2),
+                                Trough::new(2, 2),
                                 2. * offset_right,
                                 outer_color,
                                 inner_color,
@@ -163,32 +192,32 @@ fn spawn_board(mut commands: Commands) {
                 .with_children(|parent| {
                     parent
                         .spawn()
-                        .insert(Name::new("Mound 3"))
+                        .insert(Name::new("Trough 3"))
                         .insert(GlobalTransform::default())
                         .insert(Transform::default())
                         .with_children(|parent| {
                             let outer_color = Color::YELLOW;
                             let inner_color = Color::ORANGE;
 
-                            create_mound(
+                            create_trough(
                                 parent,
-                                PigId::new(3, 1),
+                                Trough::new(3, 1),
                                 2. * offset_left,
                                 outer_color,
                                 inner_color,
                             );
 
-                            create_mound(
+                            create_trough(
                                 parent,
-                                PigId::new(3, 2),
+                                Trough::new(3, 2),
                                 Vec2::ZERO,
                                 outer_color,
                                 inner_color,
                             );
 
-                            create_mound(
+                            create_trough(
                                 parent,
-                                PigId::new(3, 3),
+                                Trough::new(3, 3),
                                 -2. * offset_left,
                                 outer_color,
                                 inner_color,
@@ -205,40 +234,40 @@ fn spawn_board(mut commands: Commands) {
                 .with_children(|parent| {
                     parent
                         .spawn()
-                        .insert(Name::new("Mound 4"))
+                        .insert(Name::new("Trough 4"))
                         .insert(GlobalTransform::default())
                         .insert(Transform::default())
                         .with_children(|parent| {
                             let outer_color = Color::AQUAMARINE;
                             let inner_color = Color::BLUE;
 
-                            create_mound(
+                            create_trough(
                                 parent,
-                                PigId::new(4, 1),
+                                Trough::new(4, 1),
                                 2. * offset_right,
                                 outer_color,
                                 inner_color,
                             );
 
-                            create_mound(
+                            create_trough(
                                 parent,
-                                PigId::new(4, 2),
+                                Trough::new(4, 2),
                                 2. * offset_left,
                                 outer_color,
                                 inner_color,
                             );
 
-                            create_mound(
+                            create_trough(
                                 parent,
-                                PigId::new(4, 3),
+                                Trough::new(4, 3),
                                 -2. * offset_right,
                                 outer_color,
                                 inner_color,
                             );
 
-                            create_mound(
+                            create_trough(
                                 parent,
-                                PigId::new(4, 4),
+                                Trough::new(4, 4),
                                 -2. * offset_left,
                                 outer_color,
                                 inner_color,
@@ -255,48 +284,48 @@ fn spawn_board(mut commands: Commands) {
                 .with_children(|parent| {
                     parent
                         .spawn()
-                        .insert(Name::new("Mound 5"))
+                        .insert(Name::new("Trough 5"))
                         .insert(GlobalTransform::default())
                         .insert(Transform::default())
                         .with_children(|parent| {
                             let outer_color = Color::SALMON;
                             let inner_color = Color::RED;
 
-                            create_mound(
+                            create_trough(
                                 parent,
-                                PigId::new(5, 1),
+                                Trough::new(5, 1),
                                 2. * offset_right,
                                 outer_color,
                                 inner_color,
                             );
 
-                            create_mound(
+                            create_trough(
                                 parent,
-                                PigId::new(5, 2),
+                                Trough::new(5, 2),
                                 2. * offset_left,
                                 outer_color,
                                 inner_color,
                             );
 
-                            create_mound(
+                            create_trough(
                                 parent,
-                                PigId::new(5, 3),
+                                Trough::new(5, 3),
                                 -2. * offset_right,
                                 outer_color,
                                 inner_color,
                             );
 
-                            create_mound(
+                            create_trough(
                                 parent,
-                                PigId::new(5, 4),
+                                Trough::new(5, 4),
                                 -2. * offset_left,
                                 outer_color,
                                 inner_color,
                             );
 
-                            create_mound(
+                            create_trough(
                                 parent,
-                                PigId::new(5, 5),
+                                Trough::new(5, 5),
                                 Vec2::ZERO,
                                 outer_color,
                                 inner_color,
@@ -308,32 +337,27 @@ fn spawn_board(mut commands: Commands) {
 
 const HOLE_LINE_WIDTH: f32 = 4.0;
 
-fn create_mound(
+fn create_trough(
     parent: &mut ChildBuilder,
-    pig_id: PigId,
+    trough: Trough,
     position: Vec2,
     outer_color: Color,
     inner_color: Color,
 ) {
     parent
-        .spawn_bundle(make_mound_bundle(outer_color, inner_color, position))
-        .insert(Name::new(format!(
-            "Mound {}.{}",
-            pig_id.outer, pig_id.inner
-        )))
+        .spawn_bundle(make_trough_bundle(outer_color, inner_color, position))
+        .insert(Name::new(format!("Trough {}", trough)))
         .with_children(|parent| {
+            let pig = Pig::in_trough(trough);
             parent
                 .spawn_bundle(make_pig_bundle())
-                .insert(pig_id)
-                .insert(Name::new(format!("Pig {}.{}", pig_id.outer, pig_id.inner)))
+                .insert(pig)
+                .insert(Name::new(format!("Pig {}", pig.trough)))
                 .insert(Visibility { is_visible: false })
                 .with_children(|parent| {
                     parent
                         .spawn_bundle(make_highlight_bundle())
-                        .insert(Name::new(format!(
-                            "Highlight {}.{}",
-                            pig_id.outer, pig_id.inner
-                        )))
+                        .insert(Name::new(format!("Highlight {}", pig.trough)))
                         .insert(Visibility { is_visible: false })
                         .insert(Highlight { active: false });
                 });
@@ -378,7 +402,7 @@ fn get_hole_shape() -> impl Geometry {
     }
 }
 
-fn make_mound_bundle(outer_color: Color, inner_color: Color, transform: Vec2) -> impl Bundle {
+fn make_trough_bundle(outer_color: Color, inner_color: Color, transform: Vec2) -> impl Bundle {
     GeometryBuilder::build_as(
         &get_hole_shape(),
         DrawMode::Outlined {
@@ -400,12 +424,12 @@ fn make_border_bundle(extents: Vec2) -> impl Bundle {
     )
 }
 
-fn update_pig_visibility(mut pig_id_query: Query<(&mut PigId, &mut DrawMode, &mut Visibility)>) {
-    for (mut pig_id, mut draw_mode, mut visibility) in pig_id_query.iter_mut() {
-        if pig_id.outer == 6 && pig_id.status == PigStatus::Occupied {
-            pig_id.status = PigStatus::Empty;
+fn update_pig_visibility(mut pig_query: Query<(&mut Pig, &mut DrawMode, &mut Visibility)>) {
+    for (mut pig, mut draw_mode, mut visibility) in pig_query.iter_mut() {
+        if pig.trough.outer_number == 6 && pig.status == PigStatus::Occupied {
+            pig.status = PigStatus::Empty;
         }
-        match pig_id.status {
+        match pig.status {
             PigStatus::Empty => visibility.is_visible = false,
             PigStatus::Occupied => {
                 visibility.is_visible = true;
@@ -450,15 +474,17 @@ fn update_highlight_visibility(mut highlight_query: Query<(&Highlight, &mut Visi
 }
 
 fn activate_highlights(
-    pig_id_query: Query<(Entity, &PigId)>,
+    pig_query: Query<(Entity, &Pig)>,
     mut highlight_query: Query<(&Parent, &mut Highlight)>,
     player_query: Query<&Player>,
 ) {
     for player in player_query.iter() {
         match player.state {
-            crate::player::PlayerState::Selecting(outer_mould_index) => {
-                for (pig_entity, &pig_id) in pig_id_query.iter() {
-                    if pig_id.outer == outer_mould_index && pig_id.status != PigStatus::Occupied {
+            crate::player::PlayerState::Selecting(outer_trough_number) => {
+                for (pig_entity, &pig) in pig_query.iter() {
+                    if pig.trough.outer_number == outer_trough_number
+                        && pig.status != PigStatus::Occupied
+                    {
                         for (parent, mut highlight) in highlight_query.iter_mut() {
                             if parent.0 == pig_entity {
                                 highlight.active = true;

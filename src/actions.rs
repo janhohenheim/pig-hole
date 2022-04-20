@@ -1,4 +1,4 @@
-use crate::{board::PigId, GameState};
+use crate::{board::Pig, GameState};
 use bevy::prelude::*;
 
 pub struct ActionsPlugin;
@@ -15,24 +15,24 @@ impl Plugin for ActionsPlugin {
 
 #[derive(Default)]
 pub struct Actions {
-    pub hovered_mould: Option<PigId>,
-    pub selected_mould: Option<PigId>,
+    pub hovered_trough: Option<Pig>,
+    pub selected_trough: Option<Pig>,
 }
 
 fn set_mouse_actions(
     mut actions: ResMut<Actions>,
     mouse_input: Res<Input<MouseButton>>,
     windows: Res<Windows>,
-    mould_position_query: Query<(&GlobalTransform, &PigId)>,
+    trough_position_query: Query<(&GlobalTransform, &Pig)>,
 ) {
-    if actions.selected_mould.is_some() {
-        actions.selected_mould = None;
+    if actions.selected_trough.is_some() {
+        actions.selected_trough = None;
     }
     let window = windows.get_primary().expect("No primary window found");
     if mouse_input.just_pressed(MouseButton::Left) {
-        actions.selected_mould = get_pig_id_under_cursor(mould_position_query, window);
+        actions.selected_trough = get_pig_under_cursor(trough_position_query, window);
     } else {
-        actions.hovered_mould = get_pig_id_under_cursor(mould_position_query, window);
+        actions.hovered_trough = get_pig_under_cursor(trough_position_query, window);
     }
 }
 
@@ -45,19 +45,19 @@ fn get_cursor_world_position(window: &Window) -> Option<Vec2> {
     })
 }
 
-fn get_pig_id_under_cursor(
-    mould_position_query: Query<(&GlobalTransform, &PigId)>,
+fn get_pig_under_cursor(
+    trough_position_query: Query<(&GlobalTransform, &Pig)>,
     window: &Window,
-) -> Option<PigId> {
+) -> Option<Pig> {
     if let Some(position) = get_cursor_world_position(window) {
-        for (transform, pig_id) in mould_position_query.iter() {
+        for (transform, pig) in trough_position_query.iter() {
             const RADIUS: f32 = 20.0;
             if position.x <= transform.translation.x + RADIUS
                 && position.x >= transform.translation.x - RADIUS
                 && position.y <= transform.translation.y + RADIUS
                 && position.y >= transform.translation.y - RADIUS
             {
-                return Some(*pig_id);
+                return Some(*pig);
             }
         }
         None
