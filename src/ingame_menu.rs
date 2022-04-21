@@ -46,6 +46,9 @@ impl Default for ButtonColors {
 #[derive(Debug, Copy, Clone, Default, PartialEq, Eq, Hash, Component)]
 struct DiceRollNode;
 
+#[derive(Debug, Copy, Clone, Default, PartialEq, Eq, Hash, Component)]
+struct EndTurnNode;
+
 fn setup_menu(
     mut commands: Commands,
     font_assets: Res<FontAssets>,
@@ -54,12 +57,13 @@ fn setup_menu(
     commands
         .spawn_bundle(NodeBundle {
             style: Style {
-                size: Size::new(Val::Percent(100.0), Val::Percent(100.0)),
+                size: Size::new(Val::Px(180.0), Val::Px(200.0)),
                 justify_content: JustifyContent::SpaceBetween,
-                position_type: PositionType::Absolute,
+                align_content: AlignContent::SpaceBetween,
+                flex_direction: FlexDirection::ColumnReverse,
                 position: Rect {
-                    left: Val::Px(600.0),
-                    bottom: Val::Px(300.0),
+                    left: Val::Px(10.0),
+                    bottom: Val::Px(40.0),
                     ..default()
                 },
                 ..default()
@@ -69,38 +73,67 @@ fn setup_menu(
         })
         .insert(Name::new("Ingame menu"))
         .with_children(|parent| {
-            parent
-                .spawn_bundle(ButtonBundle {
-                    style: Style {
-                        size: Size::new(Val::Px(200.0), Val::Px(80.0)),
-                        position_type: PositionType::Relative,
-                        border: Rect::all(Val::Px(20.0)),
-                        ..default()
-                    },
-                    color: button_colors.normal,
+            spawn_button(
+                parent,
+                &button_colors,
+                &font_assets,
+                DiceRollNode,
+                "Dice roll button",
+            );
+            spawn_button(
+                parent,
+                &button_colors,
+                &font_assets,
+                EndTurnNode,
+                "End turn button",
+            );
+        });
+}
+
+fn spawn_button(
+    parent: &mut ChildBuilder,
+    button_colors: &Res<ButtonColors>,
+    font_assets: &Res<FontAssets>,
+    tag: impl Component + Clone,
+    name: &'static str,
+) {
+    parent
+        .spawn_bundle(ButtonBundle {
+            style: Style {
+                size: Size::new(Val::Auto, Val::Percent(45.0)),
+                border: Rect {
+                    left: Val::Percent(12.0),
+                    bottom: Val::Percent(15.0),
                     ..default()
-                })
-                .with_children(|parent| {
-                    parent
-                        .spawn_bundle(TextBundle {
-                            text: Text {
-                                sections: vec![TextSection {
-                                    value: "Roll dice".to_string(),
-                                    style: TextStyle {
-                                        font: font_assets.fira_sans.clone(),
-                                        font_size: 40.0,
-                                        color: Color::rgb(0.9, 0.9, 0.9),
-                                    },
-                                }],
-                                alignment: Default::default(),
+                },
+                ..default()
+            },
+            color: button_colors.normal,
+            ..default()
+        })
+        .with_children(|parent| {
+            parent
+                .spawn_bundle(TextBundle {
+                    text: Text {
+                        sections: vec![TextSection {
+                            style: TextStyle {
+                                font: font_assets.fira_sans.clone(),
+                                font_size: 40.0,
+                                color: Color::rgb(0.9, 0.9, 0.9),
                             },
                             ..default()
-                        })
-                        .insert(DiceRollNode);
+                        }],
+                        alignment: TextAlignment {
+                            vertical: VerticalAlign::Center,
+                            horizontal: HorizontalAlign::Center,
+                        },
+                    },
+                    ..default()
                 })
-                .insert(Name::new("Dice roll button"))
-                .insert(DiceRollNode);
-        });
+                .insert(tag.clone());
+        })
+        .insert(Name::new(name))
+        .insert(tag);
 }
 
 fn present_view_model(
