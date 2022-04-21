@@ -11,10 +11,20 @@ impl Plugin for IngameMenuPlugin {
             .add_system_set(SystemSet::on_enter(GameState::Playing).with_system(setup_menu))
             .add_system_set(
                 SystemSet::on_update(GameState::Playing)
-                    .with_system(click_dice_button)
-                    .with_system(update_button_for_state),
-            );
+                    .with_system(handle_click_dice_button)
+                    .with_system(handle_player_state)
+                    .with_system(present_view_model),
+            )
+            .init_resource::<ViewModel>();
     }
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, Hash, Default)]
+struct ViewModel {
+    pub dice_roll_button_text: String,
+    pub is_dice_roll_button_enabled: bool,
+    pub is_dice_roll_button_hovered: bool,
+    pub info_text_lines: Vec<String>,
 }
 
 struct ButtonColors {
@@ -93,67 +103,69 @@ fn setup_menu(
         });
 }
 
-#[allow(clippy::type_complexity)]
-fn click_dice_button(
+fn present_view_model(
     button_colors: Res<ButtonColors>,
+    mut dice_roll_button_text: Query<&mut Text, With<DiceRollNode>>,
+    mut dice_roll_button_color_query: Query<&mut UiColor, (With<Button>, With<DiceRollNode>)>,
+    view_model: Res<ViewModel>,
+) {
+    for mut text in dice_roll_button_text.iter_mut() {
+        text.sections[0].value = view_model.dice_roll_button_text.clone()
+    }
+    for mut color in dice_roll_button_color_query.iter_mut() {
+        *color = if view_model.is_dice_roll_button_enabled {
+            if view_model.is_dice_roll_button_hovered {
+                button_colors.hovered
+            } else {
+                button_colors.normal
+            }
+        } else {
+            button_colors.inactive
+        };
+    }
+}
+
+#[allow(clippy::type_complexity)]
+fn handle_click_dice_button(
     mut interaction_query: Query<
-        (&Interaction, &mut UiColor),
+        &Interaction,
         (Changed<Interaction>, (With<Button>, With<DiceRollNode>)),
     >,
     mut player_query: Query<&mut Player>,
+    mut view_model: ResMut<ViewModel>,
 ) {
-    for (interaction, mut color) in interaction_query.iter_mut() {
+    for interaction in interaction_query.iter_mut() {
         for mut player in player_query.iter_mut() {
             match *interaction {
                 Interaction::Clicked => match player.state {
                     PlayerState::Thinking() => player.state = PlayerState::ThrowingDice(),
                     _ => (),
                 },
-                Interaction::Hovered => match player.state {
-                    PlayerState::Thinking() => *color = button_colors.hovered,
-                    _ => (),
-                },
-                Interaction::None => match player.state {
-                    PlayerState::Thinking() => *color = button_colors.normal,
-                    _ => *color = button_colors.inactive,
-                },
+                Interaction::Hovered => view_model.is_dice_roll_button_hovered = true,
+                Interaction::None => view_model.is_dice_roll_button_hovered = false,
             }
         }
     }
 }
 
-fn update_button_for_state(
-    button_colors: Res<ButtonColors>,
+fn handle_player_state(
     player_query: Query<&Player, Changed<Player>>,
-    mut text_query: Query<&mut Text, With<DiceRollNode>>,
-    mut color_query: Query<&mut UiColor, (With<Button>, With<DiceRollNode>)>,
+    mut view_model: ResMut<ViewModel>,
 ) {
     for player in player_query.iter() {
         match player.state {
             PlayerState::PlacingInGroup(roll) => {
-                for mut text in text_query.iter_mut() {
-                    text.sections[0].value = format!("Rolled a {}", roll);
-                }
-                for mut color in color_query.iter_mut() {
-                    *color = button_colors.inactive;
-                }
+                view_model.dice_roll_button_text = format!("Rolled a {}", roll);
+                view_model.is_dice_roll_button_enabled = false;
             }
             PlayerState::CollectingGroup(roll) => {
-                for mut text in text_query.iter_mut() {
-                    text.sections[0].value = format!("Rolled a {}\nCollect", roll);
-                }
-                for mut color in color_query.iter_mut() {
-                    *color = button_colors.inactive;
-                }
+                view_model.dice_roll_button_text = format!("Rolled a {}\nCollect", roll);
+                view_model.is_dice_roll_button_enabled = false;
             }
             PlayerState::ThrowingDice() => (),
             PlayerState::Thinking() => {
-                for mut text in text_query.iter_mut() {
-                    text.sections[0].value = format!("Roll dice");
-                }
-                for mut color in color_query.iter_mut() {
-                    *color = button_colors.normal;
-                }
+                view_model.dice_roll_button_text = format!("Roll dice");
+                view_model.is_dice_roll_button_enabled = true;
             }
         }
     }
