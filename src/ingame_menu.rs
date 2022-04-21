@@ -106,18 +106,12 @@ fn click_dice_button(
         for mut player in player_query.iter_mut() {
             match *interaction {
                 Interaction::Clicked => match player.state {
-                    PlayerState::PlacingInGroup(_)
-                    | PlayerState::CollectingGroup(_)
-                    | PlayerState::ThrowingDice() => (),
-                    PlayerState::Thinking() => {
-                        player.state = PlayerState::ThrowingDice();
-                    }
+                    PlayerState::Thinking() => player.state = PlayerState::ThrowingDice(),
+                    _ => (),
                 },
                 Interaction::Hovered => match player.state {
-                    PlayerState::PlacingInGroup(_)
-                    | PlayerState::CollectingGroup(_)
-                    | PlayerState::ThrowingDice() => (),
                     PlayerState::Thinking() => *color = button_colors.hovered,
+                    _ => (),
                 },
                 Interaction::None => match player.state {
                     PlayerState::PlacingInGroup(_)
