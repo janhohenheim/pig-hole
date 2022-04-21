@@ -114,10 +114,8 @@ fn click_dice_button(
                     _ => (),
                 },
                 Interaction::None => match player.state {
-                    PlayerState::PlacingInGroup(_)
-                    | PlayerState::CollectingGroup(_)
-                    | PlayerState::ThrowingDice() => *color = button_colors.inactive,
                     PlayerState::Thinking() => *color = button_colors.normal,
+                    _ => *color = button_colors.inactive,
                 },
             }
         }
