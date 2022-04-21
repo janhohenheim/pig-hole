@@ -1,10 +1,6 @@
 use bevy::prelude::*;
 
-use crate::{
-    player::{PigCollection, Player},
-    turn::Turn,
-    GameState,
-};
+use crate::{pig_collection::PigCollection, player::Player, turn::Turn, GameState};
 
 pub struct PlayerCreationPlugin;
 

@@ -2,6 +2,7 @@ use crate::actions::Actions;
 use crate::board::Pig;
 use crate::board::PigStatus;
 use crate::GameState;
+use crate::pig_collection::PigCollection;
 use bevy::prelude::*;
 #[cfg(feature = "dev")]
 use bevy_inspector_egui::Inspectable;
@@ -25,12 +26,6 @@ impl Default for Player {
             pig_count: 10,
         }
     }
-}
-
-#[derive(Debug, Clone, Default, PartialEq, Eq, Hash, Component)]
-pub struct PigCollection {
-    pub modify_by: i32,
-    pub pigs: Vec<Entity>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]

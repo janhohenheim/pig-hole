@@ -1,4 +1,4 @@
-use crate::{loading::BoardAssetCreator, player::PigCollection, GameState};
+use crate::{loading::BoardAssetCreator, GameState};
 use bevy::prelude::*;
 
 pub struct PigCollectionPlugin;
@@ -10,6 +10,12 @@ impl Plugin for PigCollectionPlugin {
             SystemSet::on_update(GameState::Playing).with_system(update_pig_collection),
         );
     }
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq, Hash, Component)]
+pub struct PigCollection {
+    pub modify_by: i32,
+    pub pigs: Vec<Entity>,
 }
 
 fn update_pig_collection(
