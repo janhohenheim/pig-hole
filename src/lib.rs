@@ -5,8 +5,9 @@ mod dev;
 mod ingame_menu;
 mod loading;
 mod menu;
-mod player;
 mod pig_collection;
+mod player;
+mod turn;
 
 use crate::actions::ActionsPlugin;
 use crate::audio::InternalAudioPlugin;
@@ -15,8 +16,9 @@ use crate::dev::DevPlugin;
 use crate::ingame_menu::IngameMenuPlugin;
 use crate::loading::LoadingPlugin;
 use crate::menu::MenuPlugin;
-use crate::player::PlayerPlugin;
 use crate::pig_collection::PigCollectionPlugin;
+use crate::player::PlayerPlugin;
+use crate::turn::TurnPlugin;
 
 use bevy::app::App;
 use bevy::prelude::*;
@@ -47,6 +49,7 @@ impl Plugin for GamePlugin {
             .add_plugin(BoardPlugin)
             .add_plugin(IngameMenuPlugin)
             .add_plugin(PigCollectionPlugin)
+            .add_plugin(TurnPlugin)
             .add_plugin(DevPlugin);
     }
 }

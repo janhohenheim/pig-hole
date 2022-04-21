@@ -8,6 +8,7 @@ use bevy_inspector_egui::Inspectable;
 #[cfg(feature = "dev")]
 use bevy_inspector_egui::RegisterInspectable;
 use rand::Rng;
+
 pub struct PlayerPlugin;
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash, Component)]
