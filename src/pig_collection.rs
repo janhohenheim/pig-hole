@@ -1,5 +1,4 @@
 use crate::{loading::BoardAssetCreator, player::PigCollection, GameState};
-use bevy::log;
 use bevy::prelude::*;
 
 pub struct PigCollectionPlugin;
@@ -22,7 +21,6 @@ fn update_pig_collection(
         let pig_count = pig_collection.pigs.len();
         let delta = pig_collection.modify_by;
         if delta > 0 {
-            log::info!("Adding {} pigs", delta);
             commands
                 .entity(pig_collection_entity)
                 .with_children(|parent| {
@@ -65,7 +63,7 @@ fn get_relative_position_of_nth_pig(n: u32, board_asset_creator: &Res<BoardAsset
     let y_index = (n % 2) as f32;
     Vec3::new(
         x_index * (aabb.x + padding),
-        y_index * (aabb.y + padding),
-        1.0,
+        -y_index * (aabb.y + padding),
+        3.0,
     )
 }

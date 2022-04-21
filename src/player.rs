@@ -78,12 +78,16 @@ fn spawn_player(mut commands: Commands) {
         .spawn()
         .insert(Player::default())
         .insert(Name::new("Player"))
+        .insert(GlobalTransform::default())
+        .insert(Transform::from_xyz(0.0, -230.0, 0.0))
         .with_children(|parent| {
             parent
                 .spawn()
                 .insert(Name::new("Pig collection"))
+                .insert(GlobalTransform::default())
+                .insert(Transform::from_xyz(-175., 0.0, 0.0))
                 .insert(PigCollection {
-                    modify_by: 10,
+                    modify_by: 20,
                     ..default()
                 });
         });
