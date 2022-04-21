@@ -1,8 +1,8 @@
 use crate::actions::Actions;
 use crate::board::Pig;
 use crate::board::PigStatus;
-use crate::GameState;
 use crate::pig_collection::PigCollection;
+use crate::GameState;
 use bevy::prelude::*;
 #[cfg(feature = "dev")]
 use bevy_inspector_egui::Inspectable;
@@ -62,6 +62,7 @@ impl Plugin for PlayerPlugin {
 fn spawn_camera(mut commands: Commands) {
     commands
         .spawn_bundle(OrthographicCameraBundle::new_2d())
+        .insert(Transform::from_xyz(250.0, 0.0, 999.9))
         .insert(Name::new("Camera"));
 }
 

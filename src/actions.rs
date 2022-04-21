@@ -29,7 +29,7 @@ fn set_mouse_actions(
         actions.selected_pig = None;
     }
     let window = windows.get_primary().expect("No primary window found");
-    if mouse_input.just_pressed(MouseButton::Left) {
+    if mouse_input.pressed(MouseButton::Left) {
         actions.selected_pig = get_pig_under_cursor(trough_position_query, window);
     } else {
         actions.hovered_trough = get_pig_under_cursor(trough_position_query, window);
@@ -37,9 +37,10 @@ fn set_mouse_actions(
 }
 
 fn get_cursor_world_position(window: &Window) -> Option<Vec2> {
+    let x_offset = -250.0;
     window.cursor_position().map(|position| {
         Vec2::new(
-            position.x - window.width() / 2.,
+            position.x - x_offset - window.width() / 2.,
             position.y - window.height() / 2.,
         )
     })
