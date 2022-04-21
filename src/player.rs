@@ -130,17 +130,15 @@ fn select_pig(
                     if selected_pig.trough.group != group {
                         return;
                     }
-                    for mut pig in pig_query.iter_mut() {
-                        if pig.trough.group != group {
-                            continue;
-                        }
+                    for mut pig in pig_query.iter_mut().filter(|pig| pig.trough.group == group) {
                         pig.status = PigStatus::Empty;
                         player.state = PlayerState::Thinking();
-                        player.pig_count = player.pig_count.saturating_add(group as u32);
+                    }
 
-                        for mut pig_collection in pig_collection_query.iter_mut() {
-                            pig_collection.modify_by += group as i32;
-                        }
+                    player.pig_count = player.pig_count.saturating_add(group as u32);
+
+                    for mut pig_collection in pig_collection_query.iter_mut() {
+                        pig_collection.modify_by += group as i32;
                     }
                 } else if let Some(hovered_pig) = actions.hovered_trough {
                     if hovered_pig.trough.group != group {
