@@ -62,6 +62,14 @@ impl BoardAssetCreator {
         make_pig_bundle()
     }
 
+    pub fn get_pig_aabb(&self) -> Vec2 {
+        Vec2::splat(2.0 * PIG_RADIUS)
+    }
+
+    pub fn get_pig_collection_padding(&self) -> f32 {
+        5.0
+    }
+
     pub fn get_highlight(&self) -> ShapeBundle {
         make_highlight_bundle()
     }
@@ -101,10 +109,12 @@ fn get_hole_shape() -> impl Geometry {
     }
 }
 
+const PIG_RADIUS: f32 = 17.0;
+
 fn make_pig_bundle() -> ShapeBundle {
     GeometryBuilder::build_as(
         &shapes::Circle {
-            radius: 17.0,
+            radius: PIG_RADIUS,
             ..default()
         },
         DrawMode::Outlined {

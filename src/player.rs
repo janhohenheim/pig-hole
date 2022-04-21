@@ -26,6 +26,12 @@ impl Default for Player {
     }
 }
 
+#[derive(Debug, Clone, Default, PartialEq, Eq, Hash, Component)]
+pub struct PigCollection {
+    pub modify_by: i32,
+    pub pigs: Vec<Entity>,
+}
+
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 #[cfg_attr(feature = "dev", derive(Inspectable))]
 pub enum PlayerState {
@@ -45,7 +51,7 @@ impl Plugin for PlayerPlugin {
         app.add_system_set(
             SystemSet::on_enter(GameState::Playing)
                 .with_system(spawn_camera)
-                .with_system(spawn_player),
+                .with_system(spawn_player.label("spawn player")),
         )
         .add_system_set(
             SystemSet::on_update(GameState::Playing)
@@ -71,13 +77,23 @@ fn spawn_player(mut commands: Commands) {
     commands
         .spawn()
         .insert(Player::default())
-        .insert(Name::new("Player"));
+        .insert(Name::new("Player"))
+        .with_children(|parent| {
+            parent
+                .spawn()
+                .insert(Name::new("Pig collection"))
+                .insert(PigCollection {
+                    modify_by: 10,
+                    ..default()
+                });
+        });
 }
 
 fn select_pig(
     mut pig_query: Query<&mut Pig>,
     actions: Res<Actions>,
     mut player_query: Query<&mut Player>,
+    mut pig_collection_query: Query<&mut PigCollection>,
 ) {
     for mut player in player_query.iter_mut() {
         match player.state {
@@ -88,6 +104,9 @@ fn select_pig(
                             pig.status = PigStatus::Occupied;
                             player.state = PlayerState::Thinking();
                             player.pig_count = player.pig_count.saturating_sub(1);
+                            for mut pig_collection in pig_collection_query.iter_mut() {
+                                pig_collection.modify_by -= 1;
+                            }
                             clear_ghosts(&mut pig_query);
                         }
                     }
@@ -108,11 +127,16 @@ fn select_pig(
                         return;
                     }
                     for mut pig in pig_query.iter_mut() {
-                        if pig.trough.group == group {
-                            pig.status = PigStatus::Empty;
-                            player.state = PlayerState::Thinking();
+                        if pig.trough.group != group {
+                            continue;
                         }
+                        pig.status = PigStatus::Empty;
+                        player.state = PlayerState::Thinking();
                         player.pig_count = player.pig_count.saturating_add(group as u32);
+
+                        for mut pig_collection in pig_collection_query.iter_mut() {
+                            pig_collection.modify_by += group as i32;
+                        }
                     }
                 } else if let Some(hovered_pig) = actions.hovered_trough {
                     if hovered_pig.trough.group != group {
