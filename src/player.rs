@@ -49,16 +49,12 @@ pub struct OuterTroughIndex(u8);
 /// Player logic is only active during the State `GameState::Playing`
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
-        app.add_system_set(
-            SystemSet::on_enter(GameState::Playing)
-                .with_system(spawn_camera)
-                .with_system(spawn_player.label("spawn player")),
-        )
-        .add_system_set(
-            SystemSet::on_update(GameState::Playing)
-                .with_system(select_pig)
-                .with_system(throw_dice),
-        );
+        app.add_system_set(SystemSet::on_enter(GameState::Playing).with_system(spawn_camera))
+            .add_system_set(
+                SystemSet::on_update(GameState::Playing)
+                    .with_system(select_pig)
+                    .with_system(throw_dice),
+            );
 
         #[cfg(feature = "dev")]
         {
@@ -72,26 +68,6 @@ fn spawn_camera(mut commands: Commands) {
     commands
         .spawn_bundle(OrthographicCameraBundle::new_2d())
         .insert(Name::new("Camera"));
-}
-
-fn spawn_player(mut commands: Commands) {
-    commands
-        .spawn()
-        .insert(Player::default())
-        .insert(Name::new("Player"))
-        .insert(GlobalTransform::default())
-        .insert(Transform::from_xyz(0.0, -230.0, 0.0))
-        .with_children(|parent| {
-            parent
-                .spawn()
-                .insert(Name::new("Pig collection"))
-                .insert(GlobalTransform::default())
-                .insert(Transform::from_xyz(-175., 0.0, 0.0))
-                .insert(PigCollection {
-                    modify_by: 20,
-                    ..default()
-                });
-        });
 }
 
 fn select_pig(

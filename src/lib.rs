@@ -7,6 +7,7 @@ mod loading;
 mod menu;
 mod pig_collection;
 mod player;
+mod player_creation;
 mod turn;
 
 use crate::actions::ActionsPlugin;
@@ -18,6 +19,7 @@ use crate::loading::LoadingPlugin;
 use crate::menu::MenuPlugin;
 use crate::pig_collection::PigCollectionPlugin;
 use crate::player::PlayerPlugin;
+use crate::player_creation::PlayerCreationPlugin;
 use crate::turn::TurnPlugin;
 
 use bevy::app::App;
@@ -50,6 +52,7 @@ impl Plugin for GamePlugin {
             .add_plugin(IngameMenuPlugin)
             .add_plugin(PigCollectionPlugin)
             .add_plugin(TurnPlugin)
+            .add_plugin(PlayerCreationPlugin)
             .add_plugin(DevPlugin);
     }
 }
