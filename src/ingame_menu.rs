@@ -1,5 +1,5 @@
 use crate::loading::FontAssets;
-use crate::player::{Player, PlayerState};
+use crate::player::PlayerInteractionModel;
 use crate::GameState;
 use bevy::prelude::*;
 
@@ -12,19 +12,81 @@ impl Plugin for IngameMenuPlugin {
             .add_system_set(
                 SystemSet::on_update(GameState::Playing)
                     .with_system(handle_click_dice_button)
-                    .with_system(handle_player_state)
+                    .with_system(sync_interaction_model)
                     .with_system(present_view_model),
             )
             .init_resource::<ViewModel>();
     }
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Hash, Default)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
 struct ViewModel {
-    pub dice_roll_button_text: String,
-    pub is_dice_roll_button_enabled: bool,
-    pub is_dice_roll_button_hovered: bool,
+    pub dice_roll_button: ButtonViewModel,
+    pub end_turn_button: ButtonViewModel,
     pub info_text_lines: Vec<String>,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+struct ButtonViewModel {
+    pub is_enabled: bool,
+    pub is_hovered: bool,
+    pub text: String,
+}
+
+impl Default for ViewModel {
+    fn default() -> Self {
+        Self {
+            dice_roll_button: ButtonViewModel {
+                text: "Roll Dice".to_string(),
+                ..default()
+            },
+            end_turn_button: ButtonViewModel {
+                text: "End Turn".to_string(),
+                ..default()
+            },
+            info_text_lines: vec![],
+        }
+    }
+}
+
+impl Default for ButtonViewModel {
+    fn default() -> Self {
+        Self {
+            is_enabled: true,
+            is_hovered: false,
+            text: Default::default(),
+        }
+    }
+}
+
+#[derive(Debug, Default, Clone, Eq, PartialEq, Hash)]
+pub struct InteractionModel<T: Clone = ()> {
+    is_allowed: bool,
+    request: Option<T>,
+}
+impl<T: Clone> InteractionModel<T> {
+    pub fn interact(&mut self, value: T) {
+        if self.is_allowed {
+            self.request = Some(value);
+        }
+    }
+
+    pub fn allow(&mut self) {
+        self.is_allowed = true;
+    }
+
+    pub fn deny(&mut self) {
+        self.is_allowed = false;
+        self.request = None;
+    }
+
+    pub fn is_allowed(&self) -> bool {
+        self.is_allowed
+    }
+
+    pub fn get_interaction(&self) -> Option<T> {
+        self.request.clone()
+    }
 }
 
 struct ButtonColors {
@@ -62,8 +124,9 @@ fn setup_menu(
                 align_content: AlignContent::SpaceBetween,
                 flex_direction: FlexDirection::ColumnReverse,
                 position: Rect {
-                    left: Val::Px(10.0),
-                    bottom: Val::Px(40.0),
+                    left: Val::Percent(70.0),
+                    bottom: Val::Percent(20.0),
+                    right: Val::Percent(5.0),
                     ..default()
                 },
                 ..default()
@@ -136,18 +199,52 @@ fn spawn_button(
         .insert(tag);
 }
 
+fn sync_interaction_model(
+    interaction_model: ResMut<PlayerInteractionModel>,
+    mut view_model: ResMut<ViewModel>,
+) {
+    view_model.dice_roll_button.is_enabled = interaction_model.roll_dice.is_allowed();
+    view_model.end_turn_button.is_enabled = interaction_model.end_turn.is_allowed();
+}
+
 fn present_view_model(
     button_colors: Res<ButtonColors>,
-    mut dice_roll_button_text: Query<&mut Text, With<DiceRollNode>>,
-    mut dice_roll_button_color_query: Query<&mut UiColor, (With<Button>, With<DiceRollNode>)>,
+    mut texts: ParamSet<(
+        Query<&mut Text, With<DiceRollNode>>,
+        Query<&mut Text, With<EndTurnNode>>,
+    )>,
+    mut colors: ParamSet<(
+        Query<&mut UiColor, (With<Button>, With<DiceRollNode>)>,
+        Query<&mut UiColor, (With<Button>, With<EndTurnNode>)>,
+    )>,
     view_model: Res<ViewModel>,
 ) {
-    for mut text in dice_roll_button_text.iter_mut() {
-        text.sections[0].value = view_model.dice_roll_button_text.clone()
+    present_button(
+        &button_colors,
+        texts.p0(),
+        colors.p0(),
+        &view_model.dice_roll_button,
+    );
+    present_button(
+        &button_colors,
+        texts.p1(),
+        colors.p1(),
+        &view_model.end_turn_button,
+    );
+}
+
+fn present_button(
+    button_colors: &Res<ButtonColors>,
+    mut text_query: Query<&mut Text, With<impl Component>>,
+    mut color_query: Query<&mut UiColor, (With<Button>, With<impl Component>)>,
+    view_model: &ButtonViewModel,
+) {
+    for mut text in text_query.iter_mut() {
+        text.sections[0].value = view_model.text.clone()
     }
-    for mut color in dice_roll_button_color_query.iter_mut() {
-        *color = if view_model.is_dice_roll_button_enabled {
-            if view_model.is_dice_roll_button_hovered {
+    for mut color in color_query.iter_mut() {
+        *color = if view_model.is_enabled {
+            if view_model.is_hovered {
                 button_colors.hovered
             } else {
                 button_colors.normal
@@ -160,46 +257,38 @@ fn present_view_model(
 
 #[allow(clippy::type_complexity)]
 fn handle_click_dice_button(
-    mut interaction_query: Query<
-        &Interaction,
-        (Changed<Interaction>, (With<Button>, With<DiceRollNode>)),
-    >,
-    mut player_query: Query<&mut Player>,
+    mut interactions: ParamSet<(
+        Query<&Interaction, (Changed<Interaction>, (With<Button>, With<DiceRollNode>))>,
+        Query<&Interaction, (Changed<Interaction>, (With<Button>, With<EndTurnNode>))>,
+    )>,
+    mut player_interaction_model: ResMut<PlayerInteractionModel>,
     mut view_model: ResMut<ViewModel>,
 ) {
-    for interaction in interaction_query.iter_mut() {
-        for mut player in player_query.iter_mut() {
-            match *interaction {
-                Interaction::Clicked => match player.state {
-                    PlayerState::Thinking() => player.state = PlayerState::ThrowingDice(),
-                    _ => (),
-                },
-                Interaction::Hovered => view_model.is_dice_roll_button_hovered = true,
-                Interaction::None => view_model.is_dice_roll_button_hovered = false,
-            }
-        }
-    }
+    handle_button_interaction(
+        interactions.p0(),
+        &mut view_model.dice_roll_button,
+        &mut player_interaction_model.roll_dice,
+    );
+    handle_button_interaction(
+        interactions.p1(),
+        &mut view_model.end_turn_button,
+        &mut player_interaction_model.end_turn,
+    );
 }
 
-fn handle_player_state(
-    player_query: Query<&Player, Changed<Player>>,
-    mut view_model: ResMut<ViewModel>,
+fn handle_button_interaction(
+    mut interaction_query: Query<
+        &Interaction,
+        (Changed<Interaction>, (With<Button>, With<impl Component>)),
+    >,
+    view_model: &mut ButtonViewModel,
+    interaction_model: &mut InteractionModel,
 ) {
-    for player in player_query.iter() {
-        match player.state {
-            PlayerState::PlacingInGroup(roll) => {
-                view_model.dice_roll_button_text = format!("Rolled a {}", roll);
-                view_model.is_dice_roll_button_enabled = false;
-            }
-            PlayerState::CollectingGroup(roll) => {
-                view_model.dice_roll_button_text = format!("Rolled a {}\nCollect", roll);
-                view_model.is_dice_roll_button_enabled = false;
-            }
-            PlayerState::ThrowingDice() => (),
-            PlayerState::Thinking() => {
-                view_model.dice_roll_button_text = format!("Roll dice");
-                view_model.is_dice_roll_button_enabled = true;
-            }
+    for interaction in interaction_query.iter_mut() {
+        match *interaction {
+            Interaction::Clicked => interaction_model.interact(()),
+            Interaction::Hovered => view_model.is_hovered = true,
+            Interaction::None => view_model.is_hovered = false,
         }
     }
 }

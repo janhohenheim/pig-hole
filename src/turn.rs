@@ -36,7 +36,7 @@ impl Turn {
             current_player_index: 0,
         }
     }
-    pub fn get_max_actions(&self) -> Option<usize> {
+    pub fn get_min_actions(&self) -> Option<usize> {
         match self.number {
             0 => panic!("Turn 0 is invalid"),
             n if n <= 2 => Some(n),

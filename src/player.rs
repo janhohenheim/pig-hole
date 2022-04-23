@@ -1,7 +1,9 @@
 use crate::actions::Actions;
 use crate::board::Pig;
 use crate::board::PigStatus;
+use crate::ingame_menu::InteractionModel;
 use crate::pig_collection::PigCollection;
+use crate::turn::Turn;
 use crate::GameState;
 use bevy::prelude::*;
 #[cfg(feature = "dev")]
@@ -17,6 +19,7 @@ pub struct PlayerPlugin;
 pub struct Player {
     pub state: PlayerState,
     pub pig_count: u32,
+    pub action_count: usize,
 }
 
 impl Default for Player {
@@ -24,6 +27,7 @@ impl Default for Player {
         Player {
             state: PlayerState::Thinking(),
             pig_count: 10,
+            action_count: 0,
         }
     }
 }
@@ -37,6 +41,12 @@ pub enum PlayerState {
     ThrowingDice(),
 }
 
+#[derive(Debug, Default, Clone, Eq, PartialEq, Hash)]
+pub struct PlayerInteractionModel {
+    pub roll_dice: InteractionModel,
+    pub end_turn: InteractionModel,
+}
+
 #[derive(Debug, Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash)]
 pub struct OuterTroughIndex(u8);
 
@@ -48,8 +58,10 @@ impl Plugin for PlayerPlugin {
             .add_system_set(
                 SystemSet::on_update(GameState::Playing)
                     .with_system(select_pig)
-                    .with_system(throw_dice),
-            );
+                    .with_system(throw_dice)
+                    .with_system(sync_interaction_model),
+            )
+            .init_resource::<PlayerInteractionModel>();
 
         #[cfg(feature = "dev")]
         {
@@ -186,5 +198,41 @@ fn clear_ghosts_except(pig_query: &mut Query<&mut Pig>, exception: &Pig) {
         .filter(|pig| pig.status == PigStatus::PlacementGhost && pig.trough != exception.trough)
     {
         pig.status = PigStatus::Empty;
+    }
+}
+
+fn sync_interaction_model(
+    mut interaction_model: ResMut<PlayerInteractionModel>,
+    mut player: Query<&mut Player>,
+    turn: Res<Turn>,
+) {
+    for mut player in player.iter_mut() {
+        if interaction_model.roll_dice.get_interaction().is_some() {
+            if player.state == PlayerState::Thinking() {
+                player.state = PlayerState::ThrowingDice()
+            }
+        }
+        if interaction_model.end_turn.get_interaction().is_some() {
+            if player.state == PlayerState::Thinking() {
+                // Todo: End turn
+            }
+        }
+
+        match player.state {
+            PlayerState::PlacingInGroup(_)
+            | PlayerState::CollectingGroup(_)
+            | PlayerState::ThrowingDice() => {
+                interaction_model.roll_dice.deny();
+                interaction_model.end_turn.deny();
+            }
+            PlayerState::Thinking() => {
+                interaction_model.roll_dice.allow();
+                if turn.get_min_actions().is_none() && player.action_count > 0 {
+                    interaction_model.end_turn.allow();
+                } else {
+                    interaction_model.end_turn.deny();
+                }
+            }
+        }
     }
 }
