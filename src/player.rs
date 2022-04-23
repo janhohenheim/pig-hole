@@ -39,6 +39,7 @@ pub enum PlayerState {
     CollectingGroup(u8),
     Thinking(),
     ThrowingDice(),
+    Waiting(),
 }
 
 #[derive(Debug, Default, Clone, Eq, PartialEq, Hash)]
@@ -59,7 +60,8 @@ impl Plugin for PlayerPlugin {
                 SystemSet::on_update(GameState::Playing)
                     .with_system(select_pig)
                     .with_system(throw_dice)
-                    .with_system(sync_interaction_model),
+                    .with_system(sync_interaction_model)
+                    .with_system(resume_turn),
             )
             .init_resource::<PlayerInteractionModel>();
 
@@ -83,6 +85,7 @@ fn select_pig(
     actions: Res<Actions>,
     mut player_query: Query<&mut Player>,
     mut pig_collection_query: Query<&mut PigCollection>,
+    mut turn: ResMut<Turn>,
 ) {
     for mut player in player_query.iter_mut() {
         match player.state {
@@ -91,7 +94,17 @@ fn select_pig(
                     if let Some(mut pig) = find_mut_pig(&selected_pig, &mut pig_query) {
                         if is_valid_for_placement(&pig, group) {
                             pig.status = PigStatus::Occupied;
-                            player.state = PlayerState::Thinking();
+                            player.action_count += 1;
+                            match turn.get_min_actions() {
+                                Some(min_actions) => {
+                                    if player.action_count < min_actions {
+                                        player.state = PlayerState::Thinking()
+                                    } else {
+                                        end_turn(&mut player, &mut turn)
+                                    }
+                                }
+                                None => player.state = PlayerState::Thinking(),
+                            };
                             player.pig_count = player.pig_count.saturating_sub(1);
                             for mut pig_collection in pig_collection_query.iter_mut() {
                                 pig_collection.modify_by -= 1;
@@ -117,7 +130,7 @@ fn select_pig(
                     }
                     for mut pig in pig_query.iter_mut().filter(|pig| pig.trough.group == group) {
                         pig.status = PigStatus::Empty;
-                        player.state = PlayerState::Thinking();
+                        end_turn(&mut player, &mut turn);
                     }
 
                     player.pig_count = player.pig_count.saturating_add(group as u32);
@@ -143,9 +156,15 @@ fn select_pig(
                     clear_ghosts(&mut pig_query);
                 }
             }
-            PlayerState::Thinking() | PlayerState::ThrowingDice() => (),
+            _ => (),
         }
     }
+}
+
+fn end_turn(player: &mut Mut<Player>, turn: &mut ResMut<Turn>) {
+    player.action_count = 0;
+    turn.start_next_players_turn();
+    player.state = PlayerState::Waiting();
 }
 
 fn throw_dice(mut player_query: Query<&mut Player>, pig_query: Query<&Pig>) {
@@ -204,7 +223,7 @@ fn clear_ghosts_except(pig_query: &mut Query<&mut Pig>, exception: &Pig) {
 fn sync_interaction_model(
     mut interaction_model: ResMut<PlayerInteractionModel>,
     mut player: Query<&mut Player>,
-    turn: Res<Turn>,
+    mut turn: ResMut<Turn>,
 ) {
     for mut player in player.iter_mut() {
         if interaction_model.roll_dice.get_interaction().is_some() {
@@ -214,17 +233,11 @@ fn sync_interaction_model(
         }
         if interaction_model.end_turn.get_interaction().is_some() {
             if player.state == PlayerState::Thinking() {
-                // Todo: End turn
+                end_turn(&mut player, &mut turn);
             }
         }
 
         match player.state {
-            PlayerState::PlacingInGroup(_)
-            | PlayerState::CollectingGroup(_)
-            | PlayerState::ThrowingDice() => {
-                interaction_model.roll_dice.deny();
-                interaction_model.end_turn.deny();
-            }
             PlayerState::Thinking() => {
                 interaction_model.roll_dice.allow();
                 if turn.get_min_actions().is_none() && player.action_count > 0 {
@@ -233,6 +246,19 @@ fn sync_interaction_model(
                     interaction_model.end_turn.deny();
                 }
             }
+            _ => {
+                interaction_model.roll_dice.deny();
+                interaction_model.end_turn.deny();
+            }
         }
+    }
+}
+
+fn resume_turn(mut player_query: Query<&mut Player>, turn: Res<Turn>) {
+    let mut player = player_query
+        .get_mut(turn.get_current_player())
+        .expect("No current player found");
+    if player.state == PlayerState::Waiting() {
+        player.state = PlayerState::Thinking();
     }
 }

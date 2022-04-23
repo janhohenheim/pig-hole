@@ -1,5 +1,5 @@
 use crate::loading::FontAssets;
-use crate::player::{Player, PlayerInteractionModel};
+use crate::player::{Player, PlayerInteractionModel, PlayerState};
 use crate::turn::Turn;
 use crate::GameState;
 use bevy::prelude::*;
@@ -373,19 +373,38 @@ fn update_info_text(
     };
     for player in player_query.iter() {
         match player.state {
-            crate::player::PlayerState::PlacingInGroup(group) => {
+            PlayerState::PlacingInGroup(group) => {
                 lines[1] = get_roll_info_text(group);
-                if group == 6 {
-                    lines[2] = "Place a pig in the pig hole\n".to_string()
-                } else {
-                    lines[2] = "Place a pig in one of the corresponding troughs\n".to_string()
-                };
+                lines[2] = match turn.get_min_actions() {
+                    Some(min) => {
+                        if player.action_count == min - 1 {
+                            if group == 6 {
+                                "Place a pig in the pig hole to end your turn\n".to_string()
+                            } else {
+                                "Place a pig in a trough to end your turn\n".to_string()
+                            }
+                        } else {
+                            if group == 6 {
+                                "Place a pig in the pig hole\n".to_string()
+                            } else {
+                                "Place a pig in a trough\n".to_string()
+                            }
+                        }
+                    }
+                    None => {
+                        if group == 6 {
+                            "Place a pig in the pig hole\n".to_string()
+                        } else {
+                            "Place a pig in one of the corresponding troughs\n".to_string()
+                        }
+                    }
+                }
             }
-            crate::player::PlayerState::CollectingGroup(group) => {
+            PlayerState::CollectingGroup(group) => {
                 lines[1] = get_roll_info_text(group);
                 lines[2] = "The troughs are full. Collect the pigs to end your turn\n".to_string();
             }
-            crate::player::PlayerState::Thinking() => {
+            PlayerState::Thinking() => {
                 lines[1] = match turn.get_min_actions() {
                     Some(min) => {
                         let actions_left = min - player.action_count;
@@ -401,7 +420,11 @@ fn update_info_text(
                 };
                 lines[2] = " ".to_string();
             }
-            crate::player::PlayerState::ThrowingDice() => (),
+            PlayerState::ThrowingDice() => (),
+            PlayerState::Waiting() => {
+                lines[1] = "Waiting for your turn".to_string();
+                lines[2] = " ".to_string();
+            }
         }
     }
 }

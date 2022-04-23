@@ -393,7 +393,7 @@ fn activate_highlights(
                     highlight.active = false
                 }
             }
-            PlayerState::ThrowingDice() => (),
+            _ => (),
         }
     }
 }
