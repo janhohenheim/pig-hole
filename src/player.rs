@@ -26,7 +26,7 @@ impl Default for Player {
     fn default() -> Self {
         Player {
             state: PlayerState::Thinking(),
-            pig_count: 10,
+            pig_count: 20,
             action_count: 0,
         }
     }
@@ -40,6 +40,8 @@ pub enum PlayerState {
     Thinking(),
     ThrowingDice(),
     Waiting(),
+    Won(),
+    Lost(),
 }
 
 #[derive(Debug, Default, Clone, Eq, PartialEq, Hash)]
@@ -61,7 +63,8 @@ impl Plugin for PlayerPlugin {
                     .with_system(select_pig)
                     .with_system(throw_dice)
                     .with_system(sync_interaction_model)
-                    .with_system(resume_turn),
+                    .with_system(resume_turn)
+                    .with_system(check_win_condition),
             )
             .init_resource::<PlayerInteractionModel>();
 
@@ -260,5 +263,22 @@ fn resume_turn(mut player_query: Query<&mut Player>, turn: Res<Turn>) {
         .expect("No current player found");
     if player.state == PlayerState::Waiting() {
         player.state = PlayerState::Thinking();
+    }
+}
+
+fn check_win_condition(mut player_query: Query<&mut Player>) {
+    let mut game_ended = false;
+    for mut player in player_query.iter_mut() {
+        if player.pig_count == 0 {
+            player.state = PlayerState::Won();
+            game_ended = true;
+        }
+    }
+    if game_ended {
+        for mut player in player_query.iter_mut() {
+            if player.state != PlayerState::Won() {
+                player.state = PlayerState::Lost();
+            }
+        }
     }
 }

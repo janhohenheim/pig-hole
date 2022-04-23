@@ -422,7 +422,15 @@ fn update_info_text(
             }
             PlayerState::ThrowingDice() => (),
             PlayerState::Waiting() => {
-                lines[1] = "Waiting for your turn".to_string();
+                lines[1] = "Waiting for your turn...".to_string();
+                lines[2] = " ".to_string();
+            }
+            PlayerState::Won() => {
+                lines[1] = "You won!".to_string();
+                lines[2] = " ".to_string();
+            }
+            PlayerState::Lost() => {
+                lines[1] = "You lost".to_string();
                 lines[2] = " ".to_string();
             }
         }
