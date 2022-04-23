@@ -1,5 +1,6 @@
 use crate::loading::FontAssets;
-use crate::player::PlayerInteractionModel;
+use crate::player::{Player, PlayerInteractionModel};
+use crate::turn::Turn;
 use crate::GameState;
 use bevy::prelude::*;
 
@@ -13,6 +14,7 @@ impl Plugin for IngameMenuPlugin {
                 SystemSet::on_update(GameState::Playing)
                     .with_system(handle_click_dice_button)
                     .with_system(sync_interaction_model)
+                    .with_system(update_info_text)
                     .with_system(present_view_model),
             )
             .init_resource::<ViewModel>();
@@ -23,14 +25,7 @@ impl Plugin for IngameMenuPlugin {
 struct ViewModel {
     pub dice_roll_button: ButtonViewModel,
     pub end_turn_button: ButtonViewModel,
-    pub info_text_lines: Vec<String>,
-}
-
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
-struct ButtonViewModel {
-    pub is_enabled: bool,
-    pub is_hovered: bool,
-    pub text: String,
+    pub info_text_box: TextBoxViewModel,
 }
 
 impl Default for ViewModel {
@@ -44,9 +39,20 @@ impl Default for ViewModel {
                 text: "End Turn".to_string(),
                 ..default()
             },
-            info_text_lines: vec![],
+            info_text_box: default(),
         }
     }
+}
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+struct ButtonViewModel {
+    pub is_enabled: bool,
+    pub is_hovered: bool,
+    pub text: String,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+struct TextBoxViewModel {
+    pub text_lines: Vec<String>,
 }
 
 impl Default for ButtonViewModel {
@@ -59,6 +65,13 @@ impl Default for ButtonViewModel {
     }
 }
 
+impl Default for TextBoxViewModel {
+    fn default() -> Self {
+        Self {
+            text_lines: vec![" ".to_string(); 3],
+        }
+    }
+}
 #[derive(Debug, Default, Clone, Eq, PartialEq, Hash)]
 pub struct InteractionModel<T: Clone = ()> {
     is_allowed: bool,
@@ -111,6 +124,9 @@ struct DiceRollNode;
 #[derive(Debug, Copy, Clone, Default, PartialEq, Eq, Hash, Component)]
 struct EndTurnNode;
 
+#[derive(Debug, Copy, Clone, Default, PartialEq, Eq, Hash, Component)]
+struct InfoNode;
+
 fn setup_menu(
     mut commands: Commands,
     font_assets: Res<FontAssets>,
@@ -150,6 +166,8 @@ fn setup_menu(
                 EndTurnNode,
                 "End turn button",
             );
+
+            spawn_text(parent, &font_assets, 3, InfoNode);
         });
 }
 
@@ -163,7 +181,7 @@ fn spawn_button(
     parent
         .spawn_bundle(ButtonBundle {
             style: Style {
-                size: Size::new(Val::Auto, Val::Percent(45.0)),
+                size: Size::new(Val::Auto, Val::Percent(35.0)),
                 border: Rect {
                     left: Val::Percent(12.0),
                     bottom: Val::Percent(15.0),
@@ -199,6 +217,40 @@ fn spawn_button(
         .insert(tag);
 }
 
+fn spawn_text(
+    parent: &mut ChildBuilder,
+    font_assets: &Res<FontAssets>,
+    section_count: usize,
+    tag: impl Component,
+) {
+    parent
+        .spawn_bundle(TextBundle {
+            style: Style {
+                size: Size::new(Val::Auto, Val::Percent(15.0)),
+                ..default()
+            },
+            text: Text {
+                sections: vec![
+                    TextSection {
+                        style: TextStyle {
+                            font: font_assets.fira_sans.clone(),
+                            font_size: 20.0,
+                            color: Color::rgb(0.9, 0.9, 0.9),
+                        },
+                        ..default()
+                    };
+                    section_count
+                ],
+                alignment: TextAlignment {
+                    vertical: VerticalAlign::Bottom,
+                    horizontal: HorizontalAlign::Left,
+                },
+            },
+            ..default()
+        })
+        .insert(tag);
+}
+
 fn sync_interaction_model(
     interaction_model: ResMut<PlayerInteractionModel>,
     mut view_model: ResMut<ViewModel>,
@@ -212,6 +264,7 @@ fn present_view_model(
     mut texts: ParamSet<(
         Query<&mut Text, With<DiceRollNode>>,
         Query<&mut Text, With<EndTurnNode>>,
+        Query<&mut Text, With<InfoNode>>,
     )>,
     mut colors: ParamSet<(
         Query<&mut UiColor, (With<Button>, With<DiceRollNode>)>,
@@ -231,6 +284,7 @@ fn present_view_model(
         colors.p1(),
         &view_model.end_turn_button,
     );
+    present_text_box(texts.p2(), &view_model.info_text_box);
 }
 
 fn present_button(
@@ -252,6 +306,17 @@ fn present_button(
         } else {
             button_colors.inactive
         };
+    }
+}
+
+fn present_text_box(
+    mut text_query: Query<&mut Text, With<impl Component>>,
+    view_model: &TextBoxViewModel,
+) {
+    for mut text in text_query.iter_mut() {
+        for (section, line) in text.sections.iter_mut().zip(view_model.text_lines.iter()) {
+            section.value = line.clone()
+        }
     }
 }
 
@@ -290,5 +355,61 @@ fn handle_button_interaction(
             Interaction::Hovered => view_model.is_hovered = true,
             Interaction::None => view_model.is_hovered = false,
         }
+    }
+}
+
+fn update_info_text(
+    player_query: Query<&Player>,
+    mut view_model: ResMut<ViewModel>,
+    turn: Res<Turn>,
+) {
+    let lines = &mut view_model.info_text_box.text_lines;
+    lines[0] = match turn.get_min_actions() {
+        Some(min) => match turn.get_turn_number() {
+            1 => format!("Turn {}, everyone needs to roll {} time\n", 1, min),
+            turn => format!("Turn {}, everyone needs to roll {} times\n", turn, min),
+        },
+        None => format!("Turn {}\n", turn.get_turn_number()),
+    };
+    for player in player_query.iter() {
+        match player.state {
+            crate::player::PlayerState::PlacingInGroup(group) => {
+                lines[1] = get_roll_info_text(group);
+                if group == 6 {
+                    lines[2] = "Place a pig in the pig hole\n".to_string()
+                } else {
+                    lines[2] = "Place a pig in one of the corresponding troughs\n".to_string()
+                };
+            }
+            crate::player::PlayerState::CollectingGroup(group) => {
+                lines[1] = get_roll_info_text(group);
+                lines[2] = "The troughs are full. Collect the pigs to end your turn\n".to_string();
+            }
+            crate::player::PlayerState::Thinking() => {
+                lines[1] = match turn.get_min_actions() {
+                    Some(min) => {
+                        let actions_left = min - player.action_count;
+                        match actions_left {
+                            1 => "You need to roll 1 more time\n".to_string(),
+                            _ => format!("You need to roll {} more times\n", actions_left),
+                        }
+                    }
+                    None => match player.action_count {
+                        0 => "You need to roll at least once\n".to_string(),
+                        _ => format!("Roll as much as you want, then end your turn\n"),
+                    },
+                };
+                lines[2] = " ".to_string();
+            }
+            crate::player::PlayerState::ThrowingDice() => (),
+        }
+    }
+}
+
+fn get_roll_info_text(roll: u8) -> String {
+    if roll == 6 {
+        format!("You rolled a {}!\n", roll)
+    } else {
+        format!("You rolled a {}\n", roll)
     }
 }
