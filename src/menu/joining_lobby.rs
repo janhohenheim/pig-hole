@@ -3,14 +3,16 @@ use crate::loading::MenuAssets;
 use crate::GameState;
 use bevy::prelude::*;
 
-pub struct MainMenuPlugin;
+pub struct JoiningLobbyPlugin;
 
 /// This plugin is responsible for the game menu (containing only one button...)
 /// The menu is only drawn during the State `GameState::Menu` and is removed when that state is exited
-impl Plugin for MainMenuPlugin {
+impl Plugin for JoiningLobbyPlugin {
     fn build(&self, app: &mut App) {
-        app.add_system_set(SystemSet::on_enter(GameState::Menu).with_system(setup_menu))
-            .add_system_set(SystemSet::on_update(GameState::Menu).with_system(click_play_button));
+        app.add_system_set(SystemSet::on_enter(GameState::JoiningLobby).with_system(setup_menu))
+            .add_system_set(
+                SystemSet::on_update(GameState::JoiningLobby).with_system(click_play_button),
+            );
     }
 }
 
@@ -32,7 +34,7 @@ fn setup_menu(mut commands: Commands, font_assets: Res<FontAssets>, menu_assets:
             parent.spawn_bundle(TextBundle {
                 text: Text {
                     sections: vec![TextSection {
-                        value: "Play".to_string(),
+                        value: "Player Name:".to_string(),
                         style: TextStyle {
                             font: font_assets.fira_sans.clone(),
                             font_size: 40.0,
