@@ -551,6 +551,7 @@ dependencies = [
  "bevy-inspector-egui 0.10.0",
  "bevy_asset_loader",
  "bevy_editor_pls",
+ "bevy_egui 0.14.0",
  "bevy_kira_audio",
  "bevy_prototype_lyon",
  "bevy_renet",
