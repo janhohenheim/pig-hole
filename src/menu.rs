@@ -29,15 +29,19 @@ fn hover_over_buttons(
         (Changed<Interaction>, With<Button>),
     >,
 ) {
-    let assets = MenuAssets::new(&font_assets).button;
+    let colors = MenuAssets::new(&font_assets)
+        .button
+        .colors
+        .background
+        .unwrap();
     for (interaction, mut color) in interaction_query.iter_mut() {
         match *interaction {
             Interaction::Clicked => {} // Handled by responsible menu plugin
             Interaction::Hovered => {
-                *color = assets.colors.hovered;
+                *color = colors.hovered;
             }
             Interaction::None => {
-                *color = assets.colors.normal;
+                *color = colors.normal;
             }
         }
     }

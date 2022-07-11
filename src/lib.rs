@@ -36,6 +36,7 @@ enum GameState {
     // Here the menu is drawn and waiting for player interaction
     Menu,
     JoiningLobby,
+    Lobby,
 }
 
 pub struct GamePlugin;

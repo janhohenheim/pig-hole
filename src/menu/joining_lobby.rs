@@ -16,60 +16,44 @@ impl Plugin for JoiningLobbyPlugin {
     }
 }
 
-fn setup_menu(mut commands: Commands, font_assets: Res<FontAssets>, menu_assets: Res<MenuAssets>) {
-    commands.spawn_bundle(UiCameraBundle::default());
+fn setup_menu(mut commands: Commands, font_assets: Res<FontAssets>) {
+    let assets = MenuAssets::new(&font_assets);
     commands
-        .spawn_bundle(ButtonBundle {
+        .spawn_bundle(NodeBundle {
+            color: UiColor(Color::ALICE_BLUE),
             style: Style {
-                size: Size::new(Val::Px(120.0), Val::Px(50.0)),
-                margin: Rect::all(Val::Auto),
-                justify_content: JustifyContent::Center,
-                align_items: AlignItems::Center,
-                ..Default::default()
+                size: Size::new(Val::Percent(20.0), Val::Percent(50.0)),
+                flex_direction: FlexDirection::Row,
+                position_type: PositionType::Relative,
+                position: Rect {
+                    left: Val::Percent(40.0),
+                    bottom: Val::Percent(15.0),
+                    ..default()
+                },
+                ..default()
             },
-            color: menu_assets.button.colors.normal,
-            ..Default::default()
+            ..default()
         })
         .with_children(|parent| {
-            parent.spawn_bundle(TextBundle {
-                text: Text {
-                    sections: vec![TextSection {
-                        value: "Player Name:".to_string(),
-                        style: TextStyle {
-                            font: font_assets.fira_sans.clone(),
-                            font_size: 40.0,
-                            color: Color::rgb(0.9, 0.9, 0.9),
-                        },
-                    }],
-                    alignment: Default::default(),
-                },
-                ..Default::default()
-            });
+            parent.spawn_bundle(assets.button.create_text("Name:".to_string()));
+            parent
+                .spawn_bundle(assets.button.create_textbox(120.0, 50.0))
+                .with_children(|parent| {
+                    parent.spawn_bundle(assets.button.create_subtext("".to_string()));
+                });
         });
 }
 
 #[allow(clippy::type_complexity)]
 fn click_play_button(
     mut commands: Commands,
-    menu_assets: Res<MenuAssets>,
     mut state: ResMut<State<GameState>>,
-    mut interaction_query: Query<
-        (Entity, &Interaction, &mut UiColor),
-        (Changed<Interaction>, With<Button>),
-    >,
+    mut interaction_query: Query<(Entity, &Interaction), (Changed<Interaction>, With<Button>)>,
 ) {
-    for (button, interaction, mut color) in interaction_query.iter_mut() {
-        match *interaction {
-            Interaction::Clicked => {
-                commands.entity(button).despawn_recursive();
-                state.set(GameState::JoiningLobby).unwrap();
-            }
-            Interaction::Hovered => {
-                *color = menu_assets.button.colors.hovered;
-            }
-            Interaction::None => {
-                *color = menu_assets.button.colors.normal;
-            }
+    for (button, interaction) in interaction_query.iter_mut() {
+        if *interaction == Interaction::Clicked {
+            commands.entity(button).despawn_recursive();
+            state.set(GameState::Lobby).unwrap();
         }
     }
 }

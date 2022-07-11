@@ -20,7 +20,7 @@ fn setup_menu(mut commands: Commands, font_assets: Res<FontAssets>) {
     commands
         .spawn_bundle(assets.create_button(120.0, 50.0))
         .with_children(|parent| {
-            parent.spawn_bundle(assets.create_text("Play".to_string()));
+            parent.spawn_bundle(assets.create_subtext("Play".to_string()));
         });
 }
 
