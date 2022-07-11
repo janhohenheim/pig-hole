@@ -14,7 +14,6 @@ use crate::actions::ActionsPlugin;
 use crate::audio::InternalAudioPlugin;
 use crate::board::BoardPlugin;
 use crate::dev::DevPlugin;
-use crate::ingame_menu::IngameMenuPlugin;
 use crate::loading::LoadingPlugin;
 use crate::menu::MenuPlugin;
 use crate::pig_collection::PigCollectionPlugin;
@@ -36,6 +35,7 @@ enum GameState {
     Playing,
     // Here the menu is drawn and waiting for player interaction
     Menu,
+    JoiningLobby,
 }
 
 pub struct GamePlugin;
@@ -49,7 +49,6 @@ impl Plugin for GamePlugin {
             .add_plugin(InternalAudioPlugin)
             .add_plugin(PlayerPlugin)
             .add_plugin(BoardPlugin)
-            .add_plugin(IngameMenuPlugin)
             .add_plugin(PigCollectionPlugin)
             .add_plugin(TurnPlugin)
             .add_plugin(PlayerCreationPlugin)
