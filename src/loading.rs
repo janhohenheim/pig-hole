@@ -21,8 +21,7 @@ impl Plugin for LoadingPlugin {
             .with_collection::<TextureAssets>()
             .continue_to_state(GameState::Menu)
             .build(app);
-        app.insert_resource(BoardAssetCreator::default())
-            .insert_resource(MenuAssets::default());
+        app.insert_resource(BoardAssetCreator::default());
     }
 }
 
