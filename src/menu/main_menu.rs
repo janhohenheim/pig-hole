@@ -15,10 +15,10 @@ impl Plugin for MainMenuPlugin {
 }
 
 fn show_menu(mut egui_ctx: ResMut<EguiContext>, mut sub_menu: ResMut<SubMenu>) {
-    if *sub_menu != SubMenu::None {
+    if *sub_menu != SubMenu::Main {
         return;
     }
-    
+
     egui::CentralPanel::default().show(egui_ctx.ctx_mut(), |ui| {
         ui.vertical_centered(|ui| {
             ui.add_space(200.0);
@@ -29,7 +29,7 @@ fn show_menu(mut egui_ctx: ResMut<EguiContext>, mut sub_menu: ResMut<SubMenu>) {
                 ui.add_enabled(false, egui::Button::new("Quick Play"));
                 ui.add_enabled(false, egui::Button::new("Browse Games"));
                 if ui.button("Host Game").clicked() {
-                    *sub_menu = SubMenu::CreateLobby(None)
+                    *sub_menu = SubMenu::CreateLobby(default())
                 }
             });
         });

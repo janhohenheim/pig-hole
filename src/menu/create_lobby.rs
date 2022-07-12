@@ -10,16 +10,22 @@ pub struct CreateLobbyPlugin;
 /// The menu is only drawn during the State `GameState::Menu` and is removed when that state is exited
 impl Plugin for CreateLobbyPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<ViewModel>();
         app.add_system_set(SystemSet::on_update(GameState::Menu).with_system(show_menu));
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub enum CreateLobbySubMenu {}
+#[derive(Clone, PartialEq)]
+pub enum CreateLobbySubMenu {
+    Main(ViewModel),
+}
 
-#[derive(Default)]
-struct ViewModel {
+impl Default for CreateLobbySubMenu {
+    fn default() -> Self {
+        CreateLobbySubMenu::Main(default())
+    }
+}
+#[derive(Clone, PartialEq, Default)]
+pub struct ViewModel {
     label: String,
     value: f32,
     inverted: bool,
@@ -28,15 +34,15 @@ struct ViewModel {
 
 fn show_menu(
     mut egui_ctx: ResMut<EguiContext>,
-    mut ui_state: ResMut<ViewModel>,
     mut is_initialized: Local<bool>,
-    sub_menu: Res<SubMenu>,
+    mut sub_menu: ResMut<SubMenu>,
 ) {
-    if !matches!(*sub_menu, SubMenu::CreateLobby(None)) {
-        return;
-    }
+    let view_model = match &mut *sub_menu {
+        SubMenu::CreateLobby(CreateLobbySubMenu::Main(view_model)) => view_model,
+        _ => return,
+    };
 
-    let egui_texture_handle = ui_state
+    let egui_texture_handle = view_model
         .egui_texture_handle
         .get_or_insert_with(|| {
             egui_ctx
@@ -60,7 +66,7 @@ fn show_menu(
 
             ui.horizontal(|ui| {
                 ui.label("Write something: ");
-                ui.text_edit_singleline(&mut ui_state.label);
+                ui.text_edit_singleline(&mut view_model.label);
             });
 
             ui.add(egui::widgets::Image::new(
@@ -68,9 +74,9 @@ fn show_menu(
                 egui_texture_handle.size_vec2(),
             ));
 
-            ui.add(egui::Slider::new(&mut ui_state.value, 0.0..=10.0).text("value"));
+            ui.add(egui::Slider::new(&mut view_model.value, 0.0..=10.0).text("value"));
             if ui.button("Increment").clicked() {
-                ui_state.value += 1.0;
+                view_model.value += 1.0;
             }
 
             ui.allocate_space(egui::Vec2::new(1.0, 100.0));
@@ -125,6 +131,6 @@ fn show_menu(
         });
 
     if invert {
-        ui_state.inverted = !ui_state.inverted;
+        view_model.inverted = !view_model.inverted;
     }
 }
