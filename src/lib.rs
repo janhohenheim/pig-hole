@@ -5,6 +5,7 @@ mod dev;
 mod ingame_menu;
 mod loading;
 mod menu;
+mod networking;
 mod pig_collection;
 mod player;
 mod player_creation;
@@ -16,6 +17,7 @@ use crate::board::BoardPlugin;
 use crate::dev::DevPlugin;
 use crate::loading::LoadingPlugin;
 use crate::menu::MenuPlugin;
+use crate::networking::NetworkingPlugin;
 use crate::pig_collection::PigCollectionPlugin;
 use crate::player::PlayerPlugin;
 use crate::player_creation::PlayerCreationPlugin;
@@ -51,6 +53,7 @@ impl Plugin for GamePlugin {
             .add_plugin(PigCollectionPlugin)
             .add_plugin(TurnPlugin)
             .add_plugin(PlayerCreationPlugin)
+            .add_plugin(NetworkingPlugin)
             .add_plugin(DevPlugin);
     }
 }
