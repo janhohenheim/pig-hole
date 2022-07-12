@@ -24,13 +24,17 @@ pub struct NetworkingPlugin;
 impl Plugin for NetworkingPlugin {
     fn build(&self, app: &mut App) {
         let args: Vec<String> = std::env::args().collect();
-
-        let exec_type = &args[1];
-        let is_host = match exec_type.as_str() {
-            "client" => false,
-            "server" => true,
-            _ => panic!("Invalid argument, must be \"client\" or \"server\"."),
+        #[cfg(not(target = "wasm32"))]
+        let is_host = {
+            let exec_type = &args[1];
+            match exec_type.as_str() {
+                "client" => false,
+                "server" => true,
+                _ => panic!("Invalid argument, must be \"client\" or \"server\"."),
+            }
         };
+        #[cfg(target = "wasm32")]
+        let is_host = false;
 
         app.insert_resource(Lobby::default());
 
@@ -42,7 +46,8 @@ impl Plugin for NetworkingPlugin {
             // app.add_system(move_players_system);
         } else {
             app.add_plugin(RenetClientPlugin);
-            app.insert_resource(new_renet_client());
+            // app.insert_resource(new_renet_client());
+
             // app.insert_resource(PlayerInput::default());
             // app.add_system(player_input);
             // app.add_system(client_send_input.with_run_criteria(run_if_client_conected));
@@ -71,7 +76,7 @@ enum ServerMessages {
     PlayerDisconnected { id: u64 },
 }
 
-fn new_renet_client() -> RenetClient {
+async fn new_renet_client() -> RenetClient {
     let socket = UdpSocket::bind("127.0.0.1:0").unwrap();
     let connection_config = RenetConnectionConfig::default();
     let current_time = SystemTime::now()
@@ -80,14 +85,16 @@ fn new_renet_client() -> RenetClient {
     let mut hasher = DefaultHasher::new();
     "foo".hash(&mut hasher);
     let client_id = hasher.finish();
-    let token = generate_token("foo");
+    let token = generate_token("foo").await;
     RenetClient::new(current_time, socket, client_id, token, connection_config).unwrap()
 }
 
-fn generate_token(_player_name: &str) -> ConnectToken {
-    let token_bytes = reqwest::blocking::get("http://localhost:5000/generate_token")
+async fn generate_token(_player_name: &str) -> ConnectToken {
+    let token_bytes = reqwest::get("http://localhost:5000/generate_token")
+        .await
         .unwrap()
         .bytes()
+        .await
         .unwrap();
     ConnectToken::read(&mut token_bytes.reader()).unwrap()
 }

@@ -6,10 +6,10 @@ use bevy::window::PresentMode;
 use bevy::winit::WinitSettings;
 use bevy::DefaultPlugins;
 use bevy_egui::EguiPlugin;
-use bevy_game::GamePlugin;
 #[cfg(feature = "dev")]
 use bevy_inspector_egui::WorldInspectorPlugin;
 use bevy_prototype_lyon::prelude::*;
+use pig_hole::GamePlugin;
 fn main() {
     let mut app = App::new();
     app.insert_resource(ClearColor(Color::rgb(0.0, 0.0, 0.0)))
