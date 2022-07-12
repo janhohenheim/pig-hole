@@ -29,19 +29,19 @@ impl Plugin for MenuPlugin {
 fn configure_visuals(mut egui_ctx: ResMut<EguiContext>) {
     egui_ctx.ctx_mut().set_style(egui::Style {
         text_styles: [
-            (TextStyle::Heading, FontId::new(30.0, Proportional)),
+            (TextStyle::Heading, FontId::new(50.0, Proportional)),
             (
                 TextStyle::Name("Heading2".into()),
-                FontId::new(25.0, Proportional),
+                FontId::new(40.0, Proportional),
             ),
             (
                 TextStyle::Name("Context".into()),
-                FontId::new(23.0, Proportional),
+                FontId::new(30.0, Proportional),
             ),
-            (TextStyle::Body, FontId::new(18.0, Proportional)),
-            (TextStyle::Monospace, FontId::new(14.0, Proportional)),
-            (TextStyle::Button, FontId::new(40.0, Proportional)),
-            (TextStyle::Small, FontId::new(10.0, Proportional)),
+            (TextStyle::Body, FontId::new(30.0, Proportional)),
+            (TextStyle::Monospace, FontId::new(20.0, Proportional)),
+            (TextStyle::Button, FontId::new(30.0, Proportional)),
+            (TextStyle::Small, FontId::new(20.0, Proportional)),
         ]
         .into(),
         visuals: egui::Visuals {
