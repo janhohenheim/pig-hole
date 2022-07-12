@@ -13,10 +13,7 @@ pub struct CreateLobbyPlugin;
 /// The menu is only drawn during the State `GameState::Menu` and is removed when that state is exited
 impl Plugin for CreateLobbyPlugin {
     fn build(&self, app: &mut App) {
-        app.add_system_set(
-            SystemSet::on_update(GameState::Menu)
-                .with_system(show_menu),
-        );
+        app.add_system_set(SystemSet::on_update(GameState::Menu).with_system(show_menu));
         app.add_plugin(WaitingForPlayersPlugin);
     }
 }
@@ -59,7 +56,10 @@ fn show_menu(mut egui_ctx: ResMut<EguiContext>, mut sub_menu: ResMut<SubMenu>) {
         ui.allocate_ui_at_rect(
             egui::Rect::from_center_size(center.to_pos2(), egui::Vec2::new(400.0, 400.0)),
             |ui| {
-                ui.heading("Creating Server");
+                // Don't know why there's an ID clash, but eh
+                ui.push_id("Creating Server", |ui| {
+                    ui.heading("Creating Server");
+                });
                 ui.add_space(100.0);
                 ui.horizontal(|ui| {
                     ui.label("Player Name: ");
