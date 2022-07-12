@@ -1,6 +1,9 @@
 use crate::GameState;
 use bevy::prelude::*;
-use bevy_egui::{egui, EguiContext};
+use bevy_egui::{
+    egui::{self, RichText},
+    EguiContext,
+};
 
 mod waiting_for_players;
 use egui_extras::{self, Size, *};
@@ -35,6 +38,7 @@ pub struct ViewModel {
     player_name: String,
     back: bool,
     join_lobby: Option<String>,
+    player_name_empty_warning: bool,
 }
 
 fn show_menu(mut egui_ctx: ResMut<EguiContext>, mut sub_menu: ResMut<SubMenu>) {
@@ -63,6 +67,14 @@ fn show_menu(mut egui_ctx: ResMut<EguiContext>, mut sub_menu: ResMut<SubMenu>) {
                 ui.horizontal(|ui| {
                     ui.label("Player Name: ");
                     ui.text_edit_singleline(&mut view_model.player_name);
+                    if !view_model.player_name.is_empty() {
+                        view_model.player_name_empty_warning = false;
+                    }
+                    if view_model.player_name_empty_warning {
+                        ui.add(egui::Label::new(
+                            RichText::new("*").color(egui::Color32::RED),
+                        ));
+                    };
                 });
                 TableBuilder::new(ui)
                     .striped(true)
@@ -85,7 +97,11 @@ fn show_menu(mut egui_ctx: ResMut<EguiContext>, mut sub_menu: ResMut<SubMenu>) {
                                         .add(egui::Button::new(egui::RichText::new("Join").small()))
                                         .clicked()
                                     {
-                                        view_model.join_lobby = Some(lobby_name.to_string());
+                                        view_model.player_name_empty_warning =
+                                            view_model.player_name.is_empty();
+                                        if !view_model.player_name_empty_warning {
+                                            view_model.join_lobby = Some(lobby_name.to_string());
+                                        }
                                     };
                                 });
                             });
