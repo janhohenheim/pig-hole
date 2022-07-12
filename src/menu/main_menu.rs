@@ -2,6 +2,8 @@ use crate::GameState;
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContext};
 
+use super::SubMenu;
+
 pub struct MainMenuPlugin;
 
 /// This plugin is responsible for the game menu (containing only one button...)
@@ -12,7 +14,11 @@ impl Plugin for MainMenuPlugin {
     }
 }
 
-fn show_menu(mut egui_ctx: ResMut<EguiContext>, mut state: ResMut<State<GameState>>) {
+fn show_menu(mut egui_ctx: ResMut<EguiContext>, mut sub_menu: ResMut<SubMenu>) {
+    if *sub_menu != SubMenu::None {
+        return;
+    }
+    
     egui::CentralPanel::default().show(egui_ctx.ctx_mut(), |ui| {
         ui.vertical_centered(|ui| {
             ui.add_space(200.0);
@@ -23,7 +29,7 @@ fn show_menu(mut egui_ctx: ResMut<EguiContext>, mut state: ResMut<State<GameStat
                 ui.add_enabled(false, egui::Button::new("Quick Play"));
                 ui.add_enabled(false, egui::Button::new("Browse Games"));
                 if ui.button("Host Game").clicked() {
-                    state.set(GameState::JoiningLobby).unwrap()
+                    *sub_menu = SubMenu::CreateLobby(None)
                 }
             });
         });

@@ -1,23 +1,22 @@
-use crate::loading::FontAssets;
-use crate::loading::MenuAssets;
 use crate::GameState;
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContext};
 
-pub struct JoiningLobbyPlugin;
+use super::SubMenu;
+
+pub struct CreateLobbyPlugin;
 
 /// This plugin is responsible for the game menu (containing only one button...)
 /// The menu is only drawn during the State `GameState::Menu` and is removed when that state is exited
-impl Plugin for JoiningLobbyPlugin {
+impl Plugin for CreateLobbyPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<ViewModel>();
-        app.add_system_set(
-            SystemSet::on_update(GameState::JoiningLobby)
-                .with_system(setup_menu)
-                .with_system(click_play_button),
-        );
+        app.add_system_set(SystemSet::on_update(GameState::Menu).with_system(show_menu));
     }
 }
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum CreateLobbySubMenu {}
 
 #[derive(Default)]
 struct ViewModel {
@@ -27,11 +26,16 @@ struct ViewModel {
     egui_texture_handle: Option<egui::TextureHandle>,
 }
 
-fn setup_menu(
+fn show_menu(
     mut egui_ctx: ResMut<EguiContext>,
     mut ui_state: ResMut<ViewModel>,
     mut is_initialized: Local<bool>,
+    sub_menu: Res<SubMenu>,
 ) {
+    if !matches!(*sub_menu, SubMenu::CreateLobby(None)) {
+        return;
+    }
+
     let egui_texture_handle = ui_state
         .egui_texture_handle
         .get_or_insert_with(|| {
@@ -122,19 +126,5 @@ fn setup_menu(
 
     if invert {
         ui_state.inverted = !ui_state.inverted;
-    }
-}
-
-#[allow(clippy::type_complexity)]
-fn click_play_button(
-    mut commands: Commands,
-    mut state: ResMut<State<GameState>>,
-    mut interaction_query: Query<(Entity, &Interaction), (Changed<Interaction>, With<Button>)>,
-) {
-    for (button, interaction) in interaction_query.iter_mut() {
-        if *interaction == Interaction::Clicked {
-            commands.entity(button).despawn_recursive();
-            state.set(GameState::JoiningLobby).unwrap();
-        }
     }
 }

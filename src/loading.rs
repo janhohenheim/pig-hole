@@ -5,8 +5,6 @@ use bevy_kira_audio::AudioSource;
 
 mod board_assets;
 pub use board_assets::BoardAssetCreator;
-mod menu_assets;
-pub use menu_assets::MenuAssets;
 
 pub struct LoadingPlugin;
 
