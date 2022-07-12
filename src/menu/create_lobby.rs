@@ -56,7 +56,6 @@ fn show_menu(mut egui_ctx: ResMut<EguiContext>, mut sub_menu: ResMut<SubMenu>) {
         ui.allocate_ui_at_rect(
             egui::Rect::from_center_size(center.to_pos2(), egui::Vec2::new(400.0, 400.0)),
             |ui| {
-                // Don't know why there's an ID clash, but eh
                 ui.push_id("Creating Server", |ui| {
                     ui.heading("Creating Server");
                 });

@@ -555,6 +555,7 @@ dependencies = [
  "bevy_kira_audio",
  "bevy_prototype_lyon",
  "bevy_renet",
+ "egui_extras",
  "embed-resource",
  "rand",
  "winit 0.25.0",
@@ -1688,6 +1689,15 @@ dependencies = [
  "ahash",
  "epaint 0.18.1",
  "nohash-hasher",
+]
+
+[[package]]
+name = "egui_extras"
+version = "0.18.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "877bfcce06463cdbcfd7f4efd57608b1384d6d9ae03b33e503fbba1d1a899a52"
+dependencies = [
+ "egui 0.18.1",
 ]
 
 [[package]]

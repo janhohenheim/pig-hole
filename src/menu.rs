@@ -1,7 +1,7 @@
 use crate::GameState;
 
-use self::create_lobby::CreateLobbyPlugin;
 use self::main_menu::MainMenuPlugin;
+use self::{browse_lobbies::BrowseLobbiesPlugin, create_lobby::CreateLobbyPlugin};
 use bevy::prelude::*;
 use bevy_egui::{
     egui::{self, FontId},
@@ -10,6 +10,7 @@ use bevy_egui::{
 use egui::FontFamily::*;
 use egui::TextStyle;
 
+mod browse_lobbies;
 mod create_lobby;
 mod main_menu;
 mod state;
@@ -20,7 +21,9 @@ pub struct MenuPlugin;
 impl Plugin for MenuPlugin {
     fn build(&self, app: &mut App) {
         app.add_startup_system(configure_visuals);
-        app.add_plugin(MainMenuPlugin).add_plugin(CreateLobbyPlugin);
+        app.add_plugin(MainMenuPlugin)
+            .add_plugin(CreateLobbyPlugin)
+            .add_plugin(BrowseLobbiesPlugin);
         app.add_system_set(SystemSet::on_exit(GameState::Menu).with_system(reset_menu));
         app.init_resource::<SubMenu>();
     }
