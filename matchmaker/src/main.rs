@@ -59,7 +59,7 @@ async fn create_lobby(lobby: Json<Lobby>, mut db: Connection<Lobbies>) -> Status
                 ("name", lobby.name),
                 ("host", lobby.host),
                 ("playing", lobby.playing.to_string()),
-                ("player_count", lobby.player_count.to_string()),
+                ("players", lobby.players.to_string()),
             ],
         )
         .await
@@ -68,6 +68,9 @@ async fn create_lobby(lobby: Json<Lobby>, mut db: Connection<Lobbies>) -> Status
     let _: () = db.sadd("matchmaker/lobbies", &hash_name).await.unwrap();
     Status::Ok
 }
+
+#[put("/lobbies", format = "json", data = "<lobby>")]
+async fn set_player_count(lobby: Json<Lobby>, mut db: Connection<Lobbies>) -> Status {}
 
 fn generate_token(username: String) -> ConnectToken {
     let socket = UdpSocket::bind("127.0.0.1:0").unwrap();
@@ -93,7 +96,8 @@ fn generate_token(username: String) -> ConnectToken {
 
 #[launch]
 fn rocket() -> _ {
-    rocket::build()
-        .attach(Lobbies::init())
-        .mount("/", routes![list_lobbies, create_lobby, get_lobby])
+    rocket::build().attach(Lobbies::init()).mount(
+        "/",
+        routes![list_lobbies, create_lobby, get_lobby, does_player_exist],
+    )
 }

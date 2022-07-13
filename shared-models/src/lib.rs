@@ -1,15 +1,14 @@
-use serde::{Deserialize, Serialize};
 use renet::NETCODE_USER_DATA_BYTES;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash, Deserialize, Serialize)]
 pub struct Lobby {
     pub name: String,
-    pub host: String,
     pub playing: bool,
     pub player_count: u8,
 }
 
-// Helper struct to pass an username in user data inside the ConnectToken
+#[derive(Debug, Clone, Eq, PartialEq, Hash, Deserialize, Serialize)]
 pub struct Username(pub String);
 
 impl Username {
