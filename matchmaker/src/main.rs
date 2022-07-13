@@ -1,14 +1,19 @@
 #[macro_use]
 extern crate rocket;
 
+use renet::{ConnectToken, RenetConnectionConfig, NETCODE_KEY_BYTES};
 use rocket::http::Status;
 use rocket::serde::json::Json;
 use rocket_db_pools::deadpool_redis::redis::AsyncCommands;
 use rocket_db_pools::deadpool_redis::{self, redis};
 use rocket_db_pools::{Connection, Database};
 use serde_redis::RedisDeserialize;
-use shared_models::Lobby;
+use shared_models::{Lobby, Username};
+use std::net::{SocketAddr, UdpSocket};
+use std::time::SystemTime;
 
+const PRIVATE_KEY: &[u8; NETCODE_KEY_BYTES] = b"an example very very secret key."; // 32-bytes
+const PROTOCOL_ID: u64 = 7;
 #[derive(Database)]
 #[database("lobbies")]
 struct Lobbies(deadpool_redis::Pool);
@@ -62,6 +67,28 @@ async fn create_lobby(lobby: Json<Lobby>, mut db: Connection<Lobbies>) -> Status
 
     let _: () = db.sadd("matchmaker/lobbies", &hash_name).await.unwrap();
     Status::Ok
+}
+
+fn generate_token(username: String) -> ConnectToken {
+    let socket = UdpSocket::bind("127.0.0.1:0").unwrap();
+    let server_addr: SocketAddr = format!("127.0.0.1:1337").parse().unwrap();
+    let connection_config = RenetConnectionConfig::default();
+    let current_time = SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .unwrap();
+    let client_id = current_time.as_millis() as u64;
+    let username = Username(username);
+    ConnectToken::generate(
+        current_time,
+        PROTOCOL_ID,
+        300,
+        client_id,
+        15,
+        vec![server_addr],
+        Some(&username.to_netcode_user_data()),
+        PRIVATE_KEY,
+    )
+    .unwrap()
 }
 
 #[launch]

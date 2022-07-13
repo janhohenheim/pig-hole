@@ -2834,6 +2834,7 @@ checksum = "a3e378b66a060d48947b590737b30a1be76706c8dd7b8ba0f2fe3989c68a853f"
 name = "matchmaker"
 version = "0.1.0"
 dependencies = [
+ "renet",
  "rocket",
  "rocket_db_pools",
  "serde-redis",
@@ -4278,6 +4279,7 @@ dependencies = [
 name = "shared-models"
 version = "0.1.0"
 dependencies = [
+ "renet",
  "serde",
 ]
 
