@@ -1,5 +1,9 @@
 [workspace]
-members = ["pig-hole"]
+members = [
+    "pig-hole",
+    "matchmaker",
+    "shared-models",
+]
 resolver = "2"
 
 [profile.dev.package."*"]

@@ -80,9 +80,13 @@ fn show_menu(mut egui_ctx: ResMut<EguiContext>, mut sub_menu: ResMut<SubMenu>) {
                     .striped(true)
                     .column(Size::remainder().at_least(80.0))
                     .column(Size::initial(50.0))
+                    .column(Size::initial(50.0))
                     .header(40.0, |mut header| {
                         header.col(|ui| {
                             ui.label("Choose a lobby");
+                        });
+                        header.col(|ui| {
+                            ui.label("Players");
                         });
                     })
                     .body(|mut body| {
@@ -91,6 +95,9 @@ fn show_menu(mut egui_ctx: ResMut<EguiContext>, mut sub_menu: ResMut<SubMenu>) {
                                 let lobby_name = "Lobby Name";
                                 row.col(|ui| {
                                     ui.small(lobby_name);
+                                });
+                                row.col(|ui| {
+                                    ui.label("0/8");
                                 });
                                 row.col(|ui| {
                                     if ui
