@@ -24,7 +24,7 @@ pub struct NetworkingPlugin;
 impl Plugin for NetworkingPlugin {
     fn build(&self, app: &mut App) {
         let args: Vec<String> = std::env::args().collect();
-        #[cfg(not(target = "wasm32"))]
+        #[cfg(not(target_arch = "wasm32"))]
         let is_host = {
             let exec_type = &args[1];
             match exec_type.as_str() {
@@ -33,7 +33,7 @@ impl Plugin for NetworkingPlugin {
                 _ => panic!("Invalid argument, must be \"client\" or \"server\"."),
             }
         };
-        #[cfg(target = "wasm32")]
+        #[cfg(target_arch = "wasm32")]
         let is_host = false;
 
         app.insert_resource(Lobby::default());
