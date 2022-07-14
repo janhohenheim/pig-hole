@@ -9,11 +9,21 @@ const PRIVATE_KEY: &[u8; NETCODE_KEY_BYTES] = b"an example very very secret key.
 const PROTOCOL_ID: u64 = 7;
 
 pub fn create_lobby(lobby: &str, host: &str) -> ConnectToken {
-    generate_token(host.to_string())
+    join_lobby(lobby, host)
 }
 
 pub fn join_lobby(lobby: &str, player: &str) -> ConnectToken {
     generate_token(player.to_string())
+}
+
+fn start_server(lobby: &str, host: &str) {
+    let process = match std::io::process::Command::new("./pig-hole")
+        .args(&["--lobby", lobby, "--host", host])
+        .spawn()
+    {
+        Ok(process) => process,
+        Err(err) => panic!("Running process error: {}", err),
+    };
 }
 
 fn generate_token(username: String) -> ConnectToken {
