@@ -24,7 +24,6 @@ pub struct PlayerCountSettings {
     pub secret: String,
 }
 
-
 #[derive(Database)]
 #[database("lobbies")]
 struct Lobbies(deadpool_redis::Pool);
@@ -49,7 +48,6 @@ async fn get_lobby(lobby: String, mut db: Connection<Lobbies>) -> Json<Option<Lo
 }
 
 async fn query_lobby(lobby: &str, db: &mut Connection<Lobbies>) -> Option<Lobby> {
-    let lobby = format!("matchmaker/lobby:{}", lobby);
     let lobby_value: redis::Value = db.hgetall(&lobby).await.unwrap();
     lobby_value.deserialize().ok()
 }
@@ -61,7 +59,7 @@ async fn create_lobby(lobby: Json<LobbyCreation>, mut db: Connection<Lobbies>) -
         return Status::Conflict;
     }
 
-    let hash_name = format!("matchmaker/lobby:{}", lobby.name);
+    let hash_name = get_hash_name(&lobby.name);
 
     let _: () = db
         .hset_multiple(
@@ -96,13 +94,26 @@ async fn set_player_count(
     let lobby = format!("matchmaker/lobby:{}", lobby);
     let _: () = db
         .hset(
-            lobby,
+            &lobby,
             "player_count",
             player_count_settings.count.to_string(),
         )
         .await
         .unwrap();
+    if player_count_settings.count == 0 {
+        delete_lobby(&lobby, &mut db).await;
+    }
     Status::Ok
+}
+
+async fn delete_lobby(lobby: &str, db: &mut Connection<Lobbies>) {
+    let lobby = get_hash_name(lobby);
+    let _: () = db.del(&lobby).await.unwrap();
+    let _: () = db.srem("matchmaker/lobbies", &lobby).await.unwrap();
+}
+
+fn get_hash_name(lobby: &str) -> String {
+    format!("matchmaker/lobby:{}", lobby)
 }
 
 #[launch]
