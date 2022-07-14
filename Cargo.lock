@@ -2837,6 +2837,7 @@ dependencies = [
  "renet",
  "rocket",
  "rocket_db_pools",
+ "serde",
  "serde-redis",
  "shared-models",
 ]

@@ -7,10 +7,17 @@ use rocket::serde::json::Json;
 use rocket_db_pools::deadpool_redis::redis::AsyncCommands;
 use rocket_db_pools::deadpool_redis::{self, redis};
 use rocket_db_pools::{Connection, Database};
+use serde::{Deserialize, Serialize};
 use serde_redis::RedisDeserialize;
 use shared_models::{Lobby, Username};
 use std::net::{SocketAddr, UdpSocket};
 use std::time::SystemTime;
+
+#[derive(Debug, Clone, Eq, PartialEq, Hash, Deserialize, Serialize)]
+pub struct LobbyCreation {
+    pub name: String,
+    pub host: String,
+}
 
 const PRIVATE_KEY: &[u8; NETCODE_KEY_BYTES] = b"an example very very secret key."; // 32-bytes
 const PROTOCOL_ID: u64 = 7;
@@ -44,12 +51,12 @@ async fn query_lobby(lobby: &str, db: &mut Connection<Lobbies>) -> Option<Lobby>
 }
 
 #[put("/lobbies", format = "json", data = "<lobby>")]
-async fn create_lobby(lobby: Json<Lobby>, mut db: Connection<Lobbies>) -> Status {
+async fn create_lobby(lobby: Json<LobbyCreation>, mut db: Connection<Lobbies>) -> Status {
+    let lobby = lobby.0;
     if query_lobby(&lobby.name, &mut db).await.is_some() {
         return Status::Conflict;
     }
 
-    let lobby = lobby.0;
     let hash_name = format!("matchmaker/lobby:{}", lobby.name);
 
     let _: () = db
@@ -57,9 +64,8 @@ async fn create_lobby(lobby: Json<Lobby>, mut db: Connection<Lobbies>) -> Status
             &hash_name,
             &[
                 ("name", lobby.name),
-                ("host", lobby.host),
-                ("playing", lobby.playing.to_string()),
-                ("players", lobby.players.to_string()),
+                ("playing", false.to_string()),
+                ("player_count", 0.to_string()),
             ],
         )
         .await
@@ -69,8 +75,8 @@ async fn create_lobby(lobby: Json<Lobby>, mut db: Connection<Lobbies>) -> Status
     Status::Ok
 }
 
-#[put("/lobbies", format = "json", data = "<lobby>")]
-async fn set_player_count(lobby: Json<Lobby>, mut db: Connection<Lobbies>) -> Status {}
+#[put("/lobbies/<lobby>/playercount", data = "<count>")]
+async fn set_player_count(lobby: String, count: Json<u8>, mut db: Connection<Lobbies>) {}
 
 fn generate_token(username: String) -> ConnectToken {
     let socket = UdpSocket::bind("127.0.0.1:0").unwrap();
@@ -98,6 +104,6 @@ fn generate_token(username: String) -> ConnectToken {
 fn rocket() -> _ {
     rocket::build().attach(Lobbies::init()).mount(
         "/",
-        routes![list_lobbies, create_lobby, get_lobby, does_player_exist],
+        routes![list_lobbies, create_lobby, get_lobby, set_player_count],
     )
 }
