@@ -11,6 +11,7 @@ shared-models = { path = "../shared-models" }
 serde-redis = "0.12.0"
 renet = "0.0.8"
 serde = "1.0.139"
+uuid = "1.1.2"
 
 [dependencies.rocket_db_pools]
 version = "0.1.0-rc.2"

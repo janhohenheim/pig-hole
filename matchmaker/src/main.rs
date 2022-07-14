@@ -1,7 +1,7 @@
 #[macro_use]
 extern crate rocket;
 
-mod key_generation;
+mod server_connection;
 
 use rocket::http::Status;
 use rocket::serde::json::Json;

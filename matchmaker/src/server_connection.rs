@@ -3,9 +3,18 @@ use renet::{ConnectToken, RenetConnectionConfig};
 use shared_models::Username;
 use std::net::{SocketAddr, UdpSocket};
 use std::time::SystemTime;
+use uuid::Uuid;
 
 const PRIVATE_KEY: &[u8; NETCODE_KEY_BYTES] = b"an example very very secret key."; // 32-bytes
 const PROTOCOL_ID: u64 = 7;
+
+pub fn create_lobby(lobby: &str, host: &str) -> ConnectToken {
+    generate_token(host.to_string())
+}
+
+pub fn join_lobby(lobby: &str, player: &str) -> ConnectToken {
+    generate_token(player.to_string())
+}
 
 fn generate_token(username: String) -> ConnectToken {
     let socket = UdpSocket::bind("127.0.0.1:0").unwrap();
@@ -14,7 +23,7 @@ fn generate_token(username: String) -> ConnectToken {
     let current_time = SystemTime::now()
         .duration_since(SystemTime::UNIX_EPOCH)
         .unwrap();
-    let client_id = current_time.as_millis() as u64;
+    let client_id = Uuid.new_v4().to_u64;
     let username = Username(username);
     ConnectToken::generate(
         current_time,
