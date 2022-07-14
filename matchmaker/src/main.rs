@@ -1,7 +1,8 @@
 #[macro_use]
 extern crate rocket;
 
-use renet::{ConnectToken, RenetConnectionConfig, NETCODE_KEY_BYTES};
+mod key_generation;
+
 use rocket::http::Status;
 use rocket::serde::json::Json;
 use rocket_db_pools::deadpool_redis::redis::AsyncCommands;
@@ -9,9 +10,7 @@ use rocket_db_pools::deadpool_redis::{self, redis};
 use rocket_db_pools::{Connection, Database};
 use serde::{Deserialize, Serialize};
 use serde_redis::RedisDeserialize;
-use shared_models::{Lobby, Username};
-use std::net::{SocketAddr, UdpSocket};
-use std::time::SystemTime;
+use shared_models::Lobby;
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash, Deserialize, Serialize)]
 pub struct LobbyCreation {
@@ -19,8 +18,13 @@ pub struct LobbyCreation {
     pub host: String,
 }
 
-const PRIVATE_KEY: &[u8; NETCODE_KEY_BYTES] = b"an example very very secret key."; // 32-bytes
-const PROTOCOL_ID: u64 = 7;
+#[derive(Debug, Clone, Eq, PartialEq, Hash, Deserialize, Serialize)]
+pub struct PlayerCountSettings {
+    pub count: u8,
+    pub secret: String,
+}
+
+
 #[derive(Database)]
 #[database("lobbies")]
 struct Lobbies(deadpool_redis::Pool);
@@ -75,29 +79,30 @@ async fn create_lobby(lobby: Json<LobbyCreation>, mut db: Connection<Lobbies>) -
     Status::Ok
 }
 
-#[put("/lobbies/<lobby>/playercount", data = "<count>")]
-async fn set_player_count(lobby: String, count: Json<u8>, mut db: Connection<Lobbies>) {}
-
-fn generate_token(username: String) -> ConnectToken {
-    let socket = UdpSocket::bind("127.0.0.1:0").unwrap();
-    let server_addr: SocketAddr = format!("127.0.0.1:1337").parse().unwrap();
-    let connection_config = RenetConnectionConfig::default();
-    let current_time = SystemTime::now()
-        .duration_since(SystemTime::UNIX_EPOCH)
+#[put(
+    "/lobbies/<lobby>/playercount",
+    format = "json",
+    data = "<player_count_settings>"
+)]
+async fn set_player_count(
+    lobby: String,
+    player_count_settings: Json<PlayerCountSettings>,
+    mut db: Connection<Lobbies>,
+) -> Status {
+    let player_count_settings = player_count_settings.0;
+    if player_count_settings.secret != "secret" {
+        return Status::Unauthorized;
+    }
+    let lobby = format!("matchmaker/lobby:{}", lobby);
+    let _: () = db
+        .hset(
+            lobby,
+            "player_count",
+            player_count_settings.count.to_string(),
+        )
+        .await
         .unwrap();
-    let client_id = current_time.as_millis() as u64;
-    let username = Username(username);
-    ConnectToken::generate(
-        current_time,
-        PROTOCOL_ID,
-        300,
-        client_id,
-        15,
-        vec![server_addr],
-        Some(&username.to_netcode_user_data()),
-        PRIVATE_KEY,
-    )
-    .unwrap()
+    Status::Ok
 }
 
 #[launch]
