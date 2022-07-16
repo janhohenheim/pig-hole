@@ -16,16 +16,6 @@ pub fn join_lobby(lobby: &str, player: &str) -> ConnectToken {
     generate_token(player.to_string())
 }
 
-fn start_server(lobby: &str, host: &str) {
-    let process = match std::io::process::Command::new("./pig-hole")
-        .args(&["--lobby", lobby, "--host", host])
-        .spawn()
-    {
-        Ok(process) => process,
-        Err(err) => panic!("Running process error: {}", err),
-    };
-}
-
 fn generate_token(username: String) -> ConnectToken {
     let socket = UdpSocket::bind("127.0.0.1:0").unwrap();
     let server_addr: SocketAddr = format!("127.0.0.1:1337").parse().unwrap();
