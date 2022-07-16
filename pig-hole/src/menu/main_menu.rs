@@ -15,7 +15,7 @@ impl Plugin for MainMenuPlugin {
 }
 
 fn show_menu(mut egui_ctx: ResMut<EguiContext>, mut sub_menu: ResMut<SubMenu>) {
-    if *sub_menu != SubMenu::Main {
+    if !matches!(*sub_menu, SubMenu::Main) {
         return;
     }
 

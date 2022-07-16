@@ -7,13 +7,10 @@ use bevy_renet::{
     run_if_client_conected, RenetClientPlugin, RenetServerPlugin,
 };
 use bincode;
-use bytes::Buf;
 use renet::RenetError;
 use reqwest;
 use serde::{Deserialize, Serialize};
 use shared_models::{ConnectionData, LobbyResponse, PROTOCOL_ID};
-use std::collections::hash_map::DefaultHasher;
-use std::hash::{Hash, Hasher};
 use std::time::SystemTime;
 use std::{collections::HashMap, net::UdpSocket};
 
