@@ -60,7 +60,7 @@ impl Default for LobbyCreationState {
     }
 }
 
-fn go_back(mut commands: Commands, mut sub_menu: ResMut<SubMenu>) {
+fn go_back(commands: Commands, mut sub_menu: ResMut<SubMenu>) {
     let view_model = match &mut *sub_menu {
         SubMenu::CreateLobby(CreateLobbySubMenu::Main(view_model)) => view_model,
         _ => return,
