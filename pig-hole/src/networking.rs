@@ -11,13 +11,13 @@ use bytes::Buf;
 use renet::RenetError;
 use reqwest;
 use serde::{Deserialize, Serialize};
+use shared_models::{ConnectionData, LobbyResponse, PROTOCOL_ID};
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use std::time::SystemTime;
 use std::{collections::HashMap, net::UdpSocket};
 
 const PRIVATE_KEY: &[u8; NETCODE_KEY_BYTES] = b"an example very very secret key."; // 32-bytes
-const PROTOCOL_ID: u64 = 7;
 
 pub struct NetworkingPlugin;
 
@@ -40,7 +40,7 @@ impl Plugin for NetworkingPlugin {
 
         if is_host {
             app.add_plugin(RenetServerPlugin);
-            app.insert_resource(new_renet_server());
+            app.insert_resource(create_renet_server());
             app.add_system(server_update_system);
             app.add_system(server_sync_players);
             // app.add_system(move_players_system);
@@ -76,31 +76,25 @@ enum ServerMessages {
     PlayerDisconnected { id: u64 },
 }
 
-async fn new_renet_client() -> RenetClient {
-    let socket = UdpSocket::bind("127.0.0.1:0").unwrap();
-    let connection_config = RenetConnectionConfig::default();
-    let current_time = SystemTime::now()
-        .duration_since(SystemTime::UNIX_EPOCH)
-        .unwrap();
-    let mut hasher = DefaultHasher::new();
-    "foo".hash(&mut hasher);
-    let client_id = hasher.finish();
-    let token = generate_token("foo").await;
-    RenetClient::new(current_time, socket, client_id, token, connection_config).unwrap()
+pub async fn create_lobby(username: &str, lobby: &str) -> RenetClient {
+    let request = ConnectionData {
+        username: username.to_string(),
+        lobby: lobby.to_string(),
+    };
+    create_client_from_request("http://localhost:1337/lobbies", request).await
 }
 
-async fn generate_token(_player_name: &str) -> ConnectToken {
-    let token_bytes = reqwest::get("http://localhost:5000/generate_token")
-        .await
-        .unwrap()
-        .bytes()
-        .await
-        .unwrap();
-    ConnectToken::read(&mut token_bytes.reader()).unwrap()
+pub async fn join_lobby(username: &str, lobby: &str) -> RenetClient {
+    let request = ConnectionData {
+        username: username.to_string(),
+        lobby: lobby.to_string(),
+    };
+    let url = format!("http://localhost:1337/lobbies/{}", lobby);
+    create_client_from_request(&url, request).await
 }
 
-fn new_renet_server() -> RenetServer {
-    let server_addr = "127.0.0.1:5000".parse().unwrap();
+pub fn create_renet_server() -> RenetServer {
+    let server_addr = "127.0.0.1:1337".parse().unwrap();
     let socket = UdpSocket::bind(server_addr).unwrap();
     let connection_config = RenetConnectionConfig::default();
     let server_config = ServerConfig::new(64, PROTOCOL_ID, server_addr, *PRIVATE_KEY);
@@ -108,6 +102,37 @@ fn new_renet_server() -> RenetServer {
         .duration_since(SystemTime::UNIX_EPOCH)
         .unwrap();
     RenetServer::new(current_time, server_config, connection_config, socket).unwrap()
+}
+
+async fn create_client_from_request(url: &str, connection_data: ConnectionData) -> RenetClient {
+    let request = reqwest::Client::new()
+        .put(url)
+        .json(&connection_data)
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    create_client(request)
+}
+
+fn create_client(lobby_response: LobbyResponse) -> RenetClient {
+    let socket = UdpSocket::bind("127.0.0.1:0").unwrap();
+    let connection_config = RenetConnectionConfig::default();
+    let current_time = SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .unwrap();
+
+    let token = read_token(&lobby_response.token);
+    let client_id = lobby_response.client_id;
+
+    RenetClient::new(current_time, socket, client_id, token, connection_config).unwrap()
+}
+
+fn read_token(mut bytes: &[u8]) -> ConnectToken {
+    let token = ConnectToken::read(&mut bytes).unwrap();
+    token
 }
 
 fn server_update_system(

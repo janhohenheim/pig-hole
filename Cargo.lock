@@ -3594,6 +3594,7 @@ dependencies = [
  "renet",
  "reqwest",
  "serde",
+ "shared-models",
  "winit 0.25.0",
 ]
 

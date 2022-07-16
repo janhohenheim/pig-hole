@@ -19,6 +19,12 @@ pub struct ConnectionData {
     pub lobby: String,
 }
 
+#[derive(Debug, Clone, Eq, PartialEq, Hash, Deserialize, Serialize)]
+pub struct LobbyResponse {
+    pub token: Vec<u8>,
+    pub client_id: u64,
+}
+
 const DATA_PARTS: usize = 2;
 type DataLen = u8;
 /// Guaranteed to actually use less, since we don't account for the length of the header in the header itself

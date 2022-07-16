@@ -10,7 +10,7 @@ use rocket_db_pools::deadpool_redis::{self, redis};
 use rocket_db_pools::{Connection, Database};
 use serde::{Deserialize, Serialize};
 use serde_redis::RedisDeserialize;
-use shared_models::Lobby;
+use shared_models::{Lobby, LobbyResponse};
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash, Deserialize, Serialize)]
 pub struct LobbyCreation {
@@ -56,7 +56,7 @@ async fn query_lobby(lobby: &str, db: &mut Connection<Lobbies>) -> Option<Lobby>
 async fn create_lobby(
     lobby: Json<LobbyCreation>,
     mut db: Connection<Lobbies>,
-) -> Result<Vec<u8>, Status> {
+) -> Result<Json<LobbyResponse>, Status> {
     let lobby = lobby.0;
     if query_lobby(&lobby.name, &mut db).await.is_some() {
         return Err(Status::Conflict);
@@ -77,16 +77,14 @@ async fn create_lobby(
         .unwrap();
 
     let _: () = db.sadd("matchmaker/lobbies", &hash_name).await.unwrap();
-    let token_bytes = server_connection::create_lobby(&lobby.name, &lobby.host);
-
-    Ok(token_bytes)
+    let response = server_connection::create_lobby(&lobby.name, &lobby.host);
+    Ok(response.into())
 }
 
 #[put("/lobbies/<lobby>", format = "json", data = "<username>")]
-async fn join_lobby(lobby: String, username: Json<String>) -> Vec<u8> {
+async fn join_lobby(lobby: String, username: Json<String>) -> Json<LobbyResponse> {
     // Setting the player count is the job of the server now.
-    let token_bytes = server_connection::join_lobby(&lobby, &username.0);
-    token_bytes
+    server_connection::join_lobby(&lobby, &username.0).into()
 }
 
 #[put(
