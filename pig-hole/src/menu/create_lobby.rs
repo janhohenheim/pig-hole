@@ -1,12 +1,12 @@
+use super::SubMenu;
 use crate::{networking, GameState};
-use bevy::{prelude::*, tasks::AsyncComputeTaskPool, tasks::Task};
+use async_channel::{Receiver, Sender};
+use bevy::{log, prelude::*, tasks::AsyncComputeTaskPool};
 use bevy_egui::{egui, EguiContext};
-
-mod waiting_for_players;
 use renet::RenetClient;
 use waiting_for_players::{WaitingForPlayersPlugin, WaitingForPlayersSubMenu};
 
-use super::SubMenu;
+mod waiting_for_players;
 
 pub struct CreateLobbyPlugin;
 
@@ -18,12 +18,17 @@ impl Plugin for CreateLobbyPlugin {
             SystemSet::on_update(GameState::Menu)
                 .with_system(show_menu)
                 .with_system(go_back)
-                .with_system(create_lobby),
+                .with_system(create_lobby)
+                .with_system(poll_lobby_creation),
         );
+        let (task_sender, task_receiver) = async_channel::unbounded::<RenetClient>();
+        app.insert_resource(task_sender);
+        app.insert_resource(task_receiver);
         app.add_plugin(WaitingForPlayersPlugin);
     }
 }
 
+#[derive(PartialEq, Clone)]
 pub enum CreateLobbySubMenu {
     Main(ViewModel),
     WaitingForPlayers(WaitingForPlayersSubMenu),
@@ -34,42 +39,90 @@ impl Default for CreateLobbySubMenu {
         CreateLobbySubMenu::Main(default())
     }
 }
-#[derive(Default)]
+#[derive(Default, PartialEq, Clone)]
 pub struct ViewModel {
     player_name: String,
     lobby_name: String,
     back: bool,
-    create_lobby: bool,
-    client_task: Option<Task<RenetClient>>,
+    lobby_creation_state: LobbyCreationState,
 }
 
-fn go_back(mut egui_ctx: ResMut<EguiContext>, mut sub_menu: ResMut<SubMenu>) {
+#[derive(Eq, PartialEq, Clone)]
+pub enum LobbyCreationState {
+    None,
+    Requested,
+    Creating,
+}
+
+impl Default for LobbyCreationState {
+    fn default() -> Self {
+        Self::None
+    }
+}
+
+fn go_back(mut commands: Commands, mut sub_menu: ResMut<SubMenu>) {
     let view_model = match &mut *sub_menu {
         SubMenu::CreateLobby(CreateLobbySubMenu::Main(view_model)) => view_model,
         _ => return,
     };
     if view_model.back {
+        clean_up(commands);
         *sub_menu = SubMenu::Main;
     }
 }
 
 fn create_lobby(
-    mut egui_ctx: ResMut<EguiContext>,
     mut sub_menu: ResMut<SubMenu>,
-    pool: Res<AsyncComputeTaskPool>,
+    task_pool: Res<AsyncComputeTaskPool>,
+    task_sender: Res<Sender<RenetClient>>,
 ) {
     let view_model = match &mut *sub_menu {
         SubMenu::CreateLobby(CreateLobbySubMenu::Main(view_model)) => view_model,
         _ => return,
     };
-    if !view_model.create_lobby {
+    if !matches!(
+        view_model.lobby_creation_state,
+        LobbyCreationState::Requested
+    ) {
         return;
     }
 
-    let username = &view_model.player_name;
-    let lobby_name = &view_model.lobby_name;
-    let task = pool.spawn(async move { networking::create_lobby(username, lobby_name).await });
-    view_model.client_task = Some(task);
+    let username = view_model.player_name.clone();
+    let lobby_name = view_model.lobby_name.clone();
+    // Source(s):
+    // https://github.com/bevyengine/bevy/discussions/3351
+    // ->
+    // https://github.com/mvlabat/muddle-run/blob/b02374bf90f29a246c39d89ebf35ba49f53865b4/libs/shared_lib/src/game/level.rs#L161
+    let inner_task_sender = task_sender.clone();
+    task_pool
+        .spawn(async move {
+            let client = networking::create_lobby(&username, &lobby_name).await;
+            inner_task_sender.send(client).await.unwrap();
+        })
+        .detach();
+
+    view_model.lobby_creation_state = LobbyCreationState::Creating;
+}
+
+fn poll_lobby_creation(
+    mut commands: Commands,
+    task_receiver: Res<Receiver<RenetClient>>,
+    mut sub_menu: ResMut<SubMenu>,
+) {
+    if let Ok(client) = task_receiver.try_recv() {
+        if client.is_connected() {
+            *sub_menu = SubMenu::CreateLobby(CreateLobbySubMenu::WaitingForPlayers(default()));
+            commands.insert_resource(client);
+            clean_up(commands);
+        } else {
+            log::error!("Client connection failed!");
+        }
+    }
+}
+
+fn clean_up(mut commands: Commands) {
+    commands.remove_resource::<Receiver<RenetClient>>();
+    commands.remove_resource::<Sender<RenetClient>>();
 }
 
 fn show_menu(mut egui_ctx: ResMut<EguiContext>, mut sub_menu: ResMut<SubMenu>) {
@@ -101,15 +154,15 @@ fn show_menu(mut egui_ctx: ResMut<EguiContext>, mut sub_menu: ResMut<SubMenu>) {
                     }
                     let enabled = !view_model.player_name.is_empty()
                         && !view_model.lobby_name.is_empty()
-                        && !view_model.client_task.is_some();
+                        && matches!(view_model.lobby_creation_state, LobbyCreationState::None);
                     if ui
                         .add_enabled(enabled, egui::Button::new("Create Lobby"))
                         .clicked()
                     {
-                        view_model.create_lobby = true;
+                        view_model.lobby_creation_state = LobbyCreationState::Requested;
                     }
                 });
-                if view_model.client_task.is_some() {
+                if !matches!(view_model.lobby_creation_state, LobbyCreationState::None) {
                     ui.add_space(100.0);
                     ui.horizontal(|ui| {
                         ui.label("Creating Lobby...");

@@ -3578,6 +3578,7 @@ dependencies = [
 name = "pig-hole"
 version = "0.1.0"
 dependencies = [
+ "async-channel",
  "bevy",
  "bevy-inspector-egui 0.10.0",
  "bevy_asset_loader",

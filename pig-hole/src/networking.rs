@@ -20,9 +20,9 @@ pub struct NetworkingPlugin;
 
 impl Plugin for NetworkingPlugin {
     fn build(&self, app: &mut App) {
-        let args: Vec<String> = std::env::args().collect();
         #[cfg(not(target_arch = "wasm32"))]
         let is_host = {
+            let args: Vec<String> = std::env::args().collect();
             let exec_type = &args[1];
             match exec_type.as_str() {
                 "client" => false,

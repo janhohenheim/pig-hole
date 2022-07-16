@@ -1,6 +1,7 @@
 use crate::menu::browse_lobbies::BrowseLobbiesSubMenu;
 use crate::menu::create_lobby::CreateLobbySubMenu;
 
+#[derive(PartialEq, Clone)]
 pub enum SubMenu {
     Main,
     CreateLobby(CreateLobbySubMenu),
