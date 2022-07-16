@@ -4,6 +4,8 @@ use renet::NETCODE_USER_DATA_BYTES;
 use serde::{Deserialize, Serialize};
 use std::io::{Read, Write};
 
+pub const PROTOCOL_ID: u64 = 7;
+
 #[derive(Debug, Clone, Eq, PartialEq, Hash, Deserialize, Serialize)]
 pub struct Lobby {
     pub name: String,
@@ -29,12 +31,16 @@ impl ConnectionData {
         data.len() <= MAX_DATA_PART_BYTES
     }
 
-    pub fn try_new(username: String, lobby: String) -> Option<Self> {
-        if !Self::is_valid_data_part(&username) || !Self::is_valid_data_part(&lobby) {
+    pub fn try_new(username: &str, lobby: &str) -> Option<Self> {
+        if !Self::is_valid_data_part(username) || !Self::is_valid_data_part(lobby) {
             return None;
         }
 
-        Self { username, lobby }.into()
+        Self {
+            username: username.to_string(),
+            lobby: lobby.to_string(),
+        }
+        .into()
     }
 
     pub fn to_netcode_user_data(&self) -> [u8; NETCODE_USER_DATA_BYTES] {
@@ -84,14 +90,14 @@ mod test {
 
     #[test]
     fn can_be_created_from_valid_data() {
-        let data = ConnectionData::try_new("username".to_string(), "lobby".to_string());
+        let data = ConnectionData::try_new("username", "lobby");
         assert!(data.is_some());
     }
 
     #[test]
     fn cannot_be_created_from_invalid_data() {
         let username = std::iter::repeat("a").take(300).collect::<String>();
-        let data = ConnectionData::try_new(username, "lobby".to_string());
+        let data = ConnectionData::try_new(&username, "lobby");
         assert!(data.is_none());
     }
 
@@ -119,14 +125,10 @@ mod test {
     }
 
     fn get_valid_connection_data() -> ConnectionData {
-        ConnectionData::try_new("username".to_string(), "lobby".to_string()).unwrap()
+        ConnectionData::try_new("username", "lobby").unwrap()
     }
 
     fn get_valid_weird_connection_data() -> ConnectionData {
-        ConnectionData::try_new(
-            " 😊🐬💕😘👌  \n".to_string(),
-            "\t😊🐬💕aa😘👌  \n".to_string(),
-        )
-        .unwrap()
+        ConnectionData::try_new(" 😊🐬💕😘👌  \n", "\t😊🐬💕aa😘👌  \n").unwrap()
     }
 }

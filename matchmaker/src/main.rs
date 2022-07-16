@@ -53,10 +53,13 @@ async fn query_lobby(lobby: &str, db: &mut Connection<Lobbies>) -> Option<Lobby>
 }
 
 #[put("/lobbies", format = "json", data = "<lobby>")]
-async fn create_lobby(lobby: Json<LobbyCreation>, mut db: Connection<Lobbies>) -> Status {
+async fn create_lobby(
+    lobby: Json<LobbyCreation>,
+    mut db: Connection<Lobbies>,
+) -> Result<Vec<u8>, Status> {
     let lobby = lobby.0;
     if query_lobby(&lobby.name, &mut db).await.is_some() {
-        return Status::Conflict;
+        return Err(Status::Conflict);
     }
 
     let hash_name = get_hash_name(&lobby.name);
@@ -65,7 +68,7 @@ async fn create_lobby(lobby: Json<LobbyCreation>, mut db: Connection<Lobbies>) -
         .hset_multiple(
             &hash_name,
             &[
-                ("name", lobby.name),
+                ("name", lobby.name.clone()),
                 ("playing", false.to_string()),
                 ("player_count", 0.to_string()),
             ],
@@ -74,7 +77,16 @@ async fn create_lobby(lobby: Json<LobbyCreation>, mut db: Connection<Lobbies>) -
         .unwrap();
 
     let _: () = db.sadd("matchmaker/lobbies", &hash_name).await.unwrap();
-    Status::Ok
+    let token_bytes = server_connection::create_lobby(&lobby.name, &lobby.host);
+
+    Ok(token_bytes)
+}
+
+#[put("/lobbies/<lobby>", format = "json", data = "<username>")]
+async fn join_lobby(lobby: String, username: Json<String>) -> Vec<u8> {
+    // Setting the player count is the job of the server now.
+    let token_bytes = server_connection::join_lobby(&lobby, &username.0);
+    token_bytes
 }
 
 #[put(
@@ -120,6 +132,12 @@ fn get_hash_name(lobby: &str) -> String {
 fn rocket() -> _ {
     rocket::build().attach(Lobbies::init()).mount(
         "/",
-        routes![list_lobbies, create_lobby, get_lobby, set_player_count],
+        routes![
+            list_lobbies,
+            create_lobby,
+            get_lobby,
+            set_player_count,
+            join_lobby
+        ],
     )
 }
