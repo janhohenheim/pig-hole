@@ -102,16 +102,15 @@ pub fn create_renet_server() -> RenetServer {
 }
 
 async fn create_client_from_request(url: &str, connection_data: ConnectionData) -> RenetClient {
-    let request = reqwest::Client::new()
+    let response = reqwest::Client::new()
         .put(url)
         .json(&connection_data)
         .send()
         .await
-        .unwrap()
-        .json()
-        .await
+        .ok()
         .unwrap();
-    create_client(request)
+    let response = response.json().await.ok().unwrap();
+    create_client(response)
 }
 
 fn create_client(lobby_response: LobbyResponse) -> RenetClient {

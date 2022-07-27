@@ -1,5 +1,5 @@
 [package]
-name = "pig-hole" # ToDo
+name = "pig-hole"
 version = "0.1.0"
 publish = false
 authors = [ "Jan Hohenheim <jan@hohenheim.ch>" ]
@@ -37,7 +37,11 @@ bincode = "1.3.3"
 reqwest = { version = "0.11.11", features = [ "json" ] }
 bytes = "1.1.0"
 shared-models = { path = "../shared-models" }
-async-channel = "1.6.1"
+tokio = { version = "1.20.1", features = ["rt", "sync"] }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen-futures = "0.4.32"
+
 
 [target.'cfg(target_os = "linux")'.dependencies]
 winit = { version = "0.25", features = [ "x11" ] }

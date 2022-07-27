@@ -1,11 +1,11 @@
 use super::SubMenu;
 use crate::{networking, GameState};
-use async_channel::{Receiver, Sender};
 use bevy::{log, prelude::*, tasks::AsyncComputeTaskPool};
 use bevy_egui::{egui, EguiContext};
 use renet::RenetClient;
+use std::future::Future;
+use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
 use waiting_for_players::{WaitingForPlayersPlugin, WaitingForPlayersSubMenu};
-
 mod waiting_for_players;
 
 pub struct CreateLobbyPlugin;
@@ -21,7 +21,7 @@ impl Plugin for CreateLobbyPlugin {
                 .with_system(create_lobby)
                 .with_system(poll_lobby_creation),
         );
-        let (task_sender, task_receiver) = async_channel::unbounded::<RenetClient>();
+        let (task_sender, task_receiver) = unbounded_channel::<RenetClient>();
         app.insert_resource(task_sender);
         app.insert_resource(task_receiver);
         app.add_plugin(WaitingForPlayersPlugin);
@@ -73,7 +73,7 @@ fn go_back(commands: Commands, mut sub_menu: ResMut<SubMenu>) {
 fn create_lobby(
     mut sub_menu: ResMut<SubMenu>,
     task_pool: Res<AsyncComputeTaskPool>,
-    task_sender: Res<Sender<RenetClient>>,
+    task_sender: Res<UnboundedSender<RenetClient>>,
 ) {
     let view_model = match &mut *sub_menu {
         SubMenu::CreateLobby(CreateLobbySubMenu::Main(view_model)) => view_model,
@@ -93,19 +93,20 @@ fn create_lobby(
     // ->
     // https://github.com/mvlabat/muddle-run/blob/b02374bf90f29a246c39d89ebf35ba49f53865b4/libs/shared_lib/src/game/level.rs#L161
     let inner_task_sender = task_sender.clone();
-    task_pool
-        .spawn(async move {
-            let client = networking::create_lobby(&username, &lobby_name).await;
-            inner_task_sender.send(client).await.unwrap();
-        })
-        .detach();
+    run_async(async move {
+        let client = networking::create_lobby(&username, &lobby_name).await;
+        match inner_task_sender.send(client) {
+            Ok(_) => (),
+            Err(_) => (),
+        };
+    });
 
     view_model.lobby_creation_state = LobbyCreationState::Creating;
 }
 
 fn poll_lobby_creation(
     mut commands: Commands,
-    task_receiver: Res<Receiver<RenetClient>>,
+    mut task_receiver: ResMut<UnboundedReceiver<RenetClient>>,
     mut sub_menu: ResMut<SubMenu>,
 ) {
     if let Ok(client) = task_receiver.try_recv() {
@@ -119,8 +120,8 @@ fn poll_lobby_creation(
 }
 
 fn clean_up(mut commands: Commands) {
-    commands.remove_resource::<Receiver<RenetClient>>();
-    commands.remove_resource::<Sender<RenetClient>>();
+    commands.remove_resource::<UnboundedReceiver<RenetClient>>();
+    commands.remove_resource::<UnboundedSender<RenetClient>>();
 }
 
 fn show_menu(mut egui_ctx: ResMut<EguiContext>, mut sub_menu: ResMut<SubMenu>) {
@@ -169,5 +170,42 @@ fn show_menu(mut egui_ctx: ResMut<EguiContext>, mut sub_menu: ResMut<SubMenu>) {
                 }
             },
         );
+    });
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub fn run_async<F>(future: F)
+where
+    F: Future<Output = ()> + Send + 'static,
+{
+    std::thread::spawn(move || {
+        let rt = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("Cannot start tokio runtime");
+
+        rt.block_on(async move {
+            let local = tokio::task::LocalSet::new();
+            local
+                .run_until(async move {
+                    tokio::task::spawn_local(future).await.unwrap();
+                })
+                .await;
+        });
+    });
+}
+
+#[cfg(target_arch = "wasm32")]
+pub fn run_async<F>(future: F)
+where
+    F: Future<Output = ()> + Send + 'static,
+{
+    wasm_bindgen_futures::spawn_local(async move {
+        let local = tokio::task::LocalSet::new();
+        local
+            .run_until(async move {
+                tokio::task::spawn_local(future).await.unwrap();
+            })
+            .await;
     });
 }
