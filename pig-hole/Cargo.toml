@@ -24,8 +24,8 @@ dev = [
 bevy = { version = "0.7", default-features = false }
 bevy_kira_audio = { version = "0.9" }
 bevy_asset_loader = { version = "0.10" }
-bevy-inspector-egui = { version = "0.10", optional = true }
-bevy_editor_pls = { git = "https://github.com/jakobhellermann/bevy_editor_pls", optional = true }
+bevy-inspector-egui = { version = "0.11", optional = true }
+bevy_editor_pls = { git = "https://github.com/jakobhellermann/bevy_editor_pls", rev = "63872f9d0ecbe94be1a3ebe4087797154f3bb00e", optional = true }
 bevy_prototype_lyon = "0.5.0"
 rand = "0.8.3"
 bevy_renet = "0.0.3"
@@ -38,6 +38,7 @@ reqwest = { version = "0.11.11", features = [ "json" ] }
 bytes = "1.1.0"
 shared-models = { path = "../shared-models" }
 async-channel = "1.6.1"
+
 [target.'cfg(target_os = "linux")'.dependencies]
 winit = { version = "0.25", features = [ "x11" ] }
 

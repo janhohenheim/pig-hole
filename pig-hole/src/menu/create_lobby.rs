@@ -66,7 +66,6 @@ fn go_back(commands: Commands, mut sub_menu: ResMut<SubMenu>) {
         _ => return,
     };
     if view_model.back {
-        clean_up(commands);
         *sub_menu = SubMenu::Main;
     }
 }
@@ -113,7 +112,6 @@ fn poll_lobby_creation(
         if client.is_connected() {
             *sub_menu = SubMenu::CreateLobby(CreateLobbySubMenu::WaitingForPlayers(default()));
             commands.insert_resource(client);
-            clean_up(commands);
         } else {
             log::error!("Client connection failed!");
         }
