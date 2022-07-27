@@ -3,10 +3,10 @@ use crate::{networking, GameState};
 use bevy::{log, prelude::*, tasks::AsyncComputeTaskPool};
 use bevy_egui::{egui, EguiContext};
 use renet::RenetClient;
-use std::future::Future;
 use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
 use waiting_for_players::{WaitingForPlayersPlugin, WaitingForPlayersSubMenu};
 mod waiting_for_players;
+use networking::Worker;
 
 pub struct CreateLobbyPlugin;
 
@@ -19,8 +19,10 @@ impl Plugin for CreateLobbyPlugin {
                 .with_system(show_menu)
                 .with_system(go_back)
                 .with_system(create_lobby)
-                .with_system(poll_lobby_creation),
-        );
+                .with_system(poll_lobby_creation)
+                .with_system(fetch_data),
+        )
+        .add_startup_system(setup_client_fetch);
         let (task_sender, task_receiver) = unbounded_channel::<RenetClient>();
         app.insert_resource(task_sender);
         app.insert_resource(task_receiver);
@@ -60,7 +62,9 @@ impl Default for LobbyCreationState {
     }
 }
 
-fn go_back(commands: Commands, mut sub_menu: ResMut<SubMenu>) {
+type ClientGetter = Worker<(String, String), RenetClient>;
+
+fn go_back(mut sub_menu: ResMut<SubMenu>) {
     let view_model = match &mut *sub_menu {
         SubMenu::CreateLobby(CreateLobbySubMenu::Main(view_model)) => view_model,
         _ => return,
@@ -70,11 +74,23 @@ fn go_back(commands: Commands, mut sub_menu: ResMut<SubMenu>) {
     }
 }
 
-fn create_lobby(
-    mut sub_menu: ResMut<SubMenu>,
-    task_pool: Res<AsyncComputeTaskPool>,
-    task_sender: Res<UnboundedSender<RenetClient>>,
-) {
+fn setup_client_fetch(mut commands: Commands, task_pool: Res<AsyncComputeTaskPool>) {
+    let fetcher = ClientGetter::spawn(&task_pool, |mut receiver, sender| async move {
+        loop {
+            if let Some((username, lobby_name)) = receiver.recv().await {
+                while receiver.try_recv().is_ok() {} // Empty out buffer
+                let client = networking::create_lobby(&username, &lobby_name).await;
+                match sender.send(client) {
+                    Ok(_) => (),
+                    Err(_) => (),
+                }
+            }
+        }
+    });
+    commands.insert_resource(fetcher);
+}
+
+fn create_lobby(mut sub_menu: ResMut<SubMenu>, client_fetcher: Option<ResMut<ClientGetter>>) {
     let view_model = match &mut *sub_menu {
         SubMenu::CreateLobby(CreateLobbySubMenu::Main(view_model)) => view_model,
         _ => return,
@@ -88,18 +104,8 @@ fn create_lobby(
 
     let username = view_model.player_name.clone();
     let lobby_name = view_model.lobby_name.clone();
-    // Source(s):
-    // https://github.com/bevyengine/bevy/discussions/3351
-    // ->
-    // https://github.com/mvlabat/muddle-run/blob/b02374bf90f29a246c39d89ebf35ba49f53865b4/libs/shared_lib/src/game/level.rs#L161
-    let inner_task_sender = task_sender.clone();
-    run_async(async move {
-        let client = networking::create_lobby(&username, &lobby_name).await;
-        match inner_task_sender.send(client) {
-            Ok(_) => (),
-            Err(_) => (),
-        };
-    });
+
+    request_data(client_fetcher, username, lobby_name);
 
     view_model.lobby_creation_state = LobbyCreationState::Creating;
 }
@@ -115,6 +121,20 @@ fn poll_lobby_creation(
             commands.insert_resource(client);
         } else {
             log::error!("Client connection failed!");
+        }
+    }
+}
+
+fn request_data(data_fetcher: Option<ResMut<ClientGetter>>, username: String, lobby_name: String) {
+    if let Some(fetcher) = data_fetcher {
+        fetcher.input.send((username, lobby_name)).unwrap();
+    }
+}
+
+fn fetch_data(mut commands: Commands, data_fetcher: Option<ResMut<ClientGetter>>) {
+    if let Some(mut fetcher) = data_fetcher {
+        while let Ok(client) = fetcher.output.try_recv() {
+            commands.insert_resource(client);
         }
     }
 }
@@ -170,42 +190,5 @@ fn show_menu(mut egui_ctx: ResMut<EguiContext>, mut sub_menu: ResMut<SubMenu>) {
                 }
             },
         );
-    });
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-pub fn run_async<F>(future: F)
-where
-    F: Future<Output = ()> + Send + 'static,
-{
-    std::thread::spawn(move || {
-        let rt = tokio::runtime::Builder::new_current_thread()
-            .enable_all()
-            .build()
-            .expect("Cannot start tokio runtime");
-
-        rt.block_on(async move {
-            let local = tokio::task::LocalSet::new();
-            local
-                .run_until(async move {
-                    tokio::task::spawn_local(future).await.unwrap();
-                })
-                .await;
-        });
-    });
-}
-
-#[cfg(target_arch = "wasm32")]
-pub fn run_async<F>(future: F)
-where
-    F: Future<Output = ()> + Send + 'static,
-{
-    wasm_bindgen_futures::spawn_local(async move {
-        let local = tokio::task::LocalSet::new();
-        local
-            .run_until(async move {
-                tokio::task::spawn_local(future).await.unwrap();
-            })
-            .await;
     });
 }

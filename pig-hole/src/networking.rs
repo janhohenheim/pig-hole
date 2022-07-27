@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{prelude::*, tasks::AsyncComputeTaskPool};
 use bevy_renet::{
     renet::{
         ConnectToken, RenetClient, RenetConnectionConfig, RenetServer, ServerConfig, ServerEvent,
@@ -11,8 +11,9 @@ use renet::RenetError;
 use reqwest;
 use serde::{Deserialize, Serialize};
 use shared_models::{ConnectionData, LobbyResponse, PROTOCOL_ID};
-use std::time::SystemTime;
 use std::{collections::HashMap, net::UdpSocket};
+use std::{future::Future, time::SystemTime};
+use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
 
 const PRIVATE_KEY: &[u8; NETCODE_KEY_BYTES] = b"an example very very secret key."; // 32-bytes
 
@@ -54,6 +55,33 @@ impl Plugin for NetworkingPlugin {
         app.add_system(panic_on_error_system);
 
         app.run();
+    }
+}
+
+// Source(s):
+// https://github.com/bevyengine/bevy/discussions/3351
+// ->
+// https://gist.github.com/samcarey/0899bc8688a31c22028497088e4b17f9
+pub struct Worker<I, O> {
+    pub input: UnboundedSender<I>,
+    pub output: UnboundedReceiver<O>,
+}
+
+impl<I, O> Worker<I, O> {
+    pub fn spawn<Func, Fut>(thread_pool: &Res<AsyncComputeTaskPool>, function: Func) -> Self
+    where
+        Func: FnOnce(UnboundedReceiver<I>, UnboundedSender<O>) -> Fut,
+        Fut: Future<Output = ()> + 'static,
+    {
+        let (input_tx, input_rx) = unbounded_channel::<I>();
+        let (output_tx, output_rx) = unbounded_channel::<O>();
+        thread_pool
+            .spawn_local(function(input_rx, output_tx))
+            .detach();
+        Worker {
+            input: input_tx,
+            output: output_rx,
+        }
     }
 }
 
