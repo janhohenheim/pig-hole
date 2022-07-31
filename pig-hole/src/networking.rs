@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{log, prelude::*};
 use bevy_renet::{
     renet::{
         ConnectToken, RenetClient, RenetConnectionConfig, RenetServer, ServerConfig, ServerEvent,
@@ -8,13 +8,14 @@ use bevy_renet::{
 };
 use bincode;
 use renet::RenetError;
-use reqwest;
 use serde::{Deserialize, Serialize};
 use shared_models::{ConnectionData, LobbyResponse, PROTOCOL_ID};
 use std::time::SystemTime;
 use std::{collections::HashMap, net::UdpSocket};
 
 const PRIVATE_KEY: &[u8; NETCODE_KEY_BYTES] = b"an example very very secret key."; // 32-bytes
+
+mod http;
 
 pub struct NetworkingPlugin;
 
@@ -43,8 +44,6 @@ impl Plugin for NetworkingPlugin {
             // app.add_system(move_players_system);
         } else {
             app.add_plugin(RenetClientPlugin);
-            // app.insert_resource(new_renet_client());
-
             // app.insert_resource(PlayerInput::default());
             // app.add_system(player_input);
             // app.add_system(client_send_input.with_run_criteria(run_if_client_conected));
@@ -98,19 +97,12 @@ pub fn create_renet_server() -> RenetServer {
     let current_time = SystemTime::now()
         .duration_since(SystemTime::UNIX_EPOCH)
         .unwrap();
+    bevy::log::info!("Server listening on {}", server_addr);
     RenetServer::new(current_time, server_config, connection_config, socket).unwrap()
 }
 
 async fn create_client_from_request(url: &str, connection_data: ConnectionData) -> RenetClient {
-    let request = reqwest::Client::new()
-        .put(url)
-        .json(&connection_data)
-        .send()
-        .await
-        .unwrap()
-        .json()
-        .await
-        .unwrap();
+    let request = http::put(url, connection_data).await;
     create_client(request)
 }
 

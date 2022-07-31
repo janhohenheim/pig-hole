@@ -1,7 +1,8 @@
+use std::sync::{Arc, RwLock};
+
 use super::SubMenu;
 use crate::{networking, GameState};
-use async_channel::{Receiver, Sender};
-use bevy::{log, prelude::*, tasks::AsyncComputeTaskPool};
+use bevy::{prelude::*, tasks::IoTaskPool};
 use bevy_egui::{egui, EguiContext};
 use renet::RenetClient;
 use waiting_for_players::{WaitingForPlayersPlugin, WaitingForPlayersSubMenu};
@@ -9,6 +10,8 @@ use waiting_for_players::{WaitingForPlayersPlugin, WaitingForPlayersSubMenu};
 mod waiting_for_players;
 
 pub struct CreateLobbyPlugin;
+
+type Client = Arc<RwLock<Option<RenetClient>>>;
 
 /// This plugin is responsible for the game menu (containing only one button...)
 /// The menu is only drawn during the State `GameState::Menu` and is removed when that state is exited
@@ -19,11 +22,9 @@ impl Plugin for CreateLobbyPlugin {
                 .with_system(show_menu)
                 .with_system(go_back)
                 .with_system(create_lobby)
-                .with_system(poll_lobby_creation),
+                .with_system(poll_client_creation),
         );
-        let (task_sender, task_receiver) = async_channel::unbounded::<RenetClient>();
-        app.insert_resource(task_sender);
-        app.insert_resource(task_receiver);
+        app.init_resource::<Client>();
         app.add_plugin(WaitingForPlayersPlugin);
     }
 }
@@ -60,7 +61,27 @@ impl Default for LobbyCreationState {
     }
 }
 
-fn go_back(commands: Commands, mut sub_menu: ResMut<SubMenu>) {
+fn poll_client_creation(
+    mut commands: Commands,
+    client: ResMut<Client>,
+    mut sub_menu: ResMut<SubMenu>,
+) {
+    let view_model = match &mut *sub_menu {
+        SubMenu::CreateLobby(CreateLobbySubMenu::Main(view_model)) => view_model,
+        _ => return,
+    };
+    if matches!(
+        view_model.lobby_creation_state,
+        LobbyCreationState::Creating
+    ) {
+        let client = client.write().unwrap().take();
+        if let Some(client) = client {
+            commands.insert_resource(client)
+        }
+    }
+}
+
+fn go_back(mut sub_menu: ResMut<SubMenu>) {
     let view_model = match &mut *sub_menu {
         SubMenu::CreateLobby(CreateLobbySubMenu::Main(view_model)) => view_model,
         _ => return,
@@ -70,11 +91,7 @@ fn go_back(commands: Commands, mut sub_menu: ResMut<SubMenu>) {
     }
 }
 
-fn create_lobby(
-    mut sub_menu: ResMut<SubMenu>,
-    task_pool: Res<AsyncComputeTaskPool>,
-    task_sender: Res<Sender<RenetClient>>,
-) {
+fn create_lobby(mut sub_menu: ResMut<SubMenu>, task_pool: Res<IoTaskPool>, client: Res<Client>) {
     let view_model = match &mut *sub_menu {
         SubMenu::CreateLobby(CreateLobbySubMenu::Main(view_model)) => view_model,
         _ => return,
@@ -88,39 +105,20 @@ fn create_lobby(
 
     let username = view_model.player_name.clone();
     let lobby_name = view_model.lobby_name.clone();
-    // Source(s):
-    // https://github.com/bevyengine/bevy/discussions/3351
-    // ->
-    // https://github.com/mvlabat/muddle-run/blob/b02374bf90f29a246c39d89ebf35ba49f53865b4/libs/shared_lib/src/game/level.rs#L161
-    let inner_task_sender = task_sender.clone();
+    // Source: https://github.com/vleue/jornet/blob/2a414a8f85f975ae8d54b9e3ceab348db7c6250d/bevy-jornet/src/leaderboards.rs#L49-L55
+    let inner_client = client.clone();
     task_pool
         .spawn(async move {
             let client = networking::create_lobby(&username, &lobby_name).await;
-            inner_task_sender.send(client).await.unwrap();
+            *inner_client.write().unwrap() = Some(client);
         })
         .detach();
 
     view_model.lobby_creation_state = LobbyCreationState::Creating;
 }
 
-fn poll_lobby_creation(
-    mut commands: Commands,
-    task_receiver: Res<Receiver<RenetClient>>,
-    mut sub_menu: ResMut<SubMenu>,
-) {
-    if let Ok(client) = task_receiver.try_recv() {
-        if client.is_connected() {
-            *sub_menu = SubMenu::CreateLobby(CreateLobbySubMenu::WaitingForPlayers(default()));
-            commands.insert_resource(client);
-        } else {
-            log::error!("Client connection failed!");
-        }
-    }
-}
-
 fn clean_up(mut commands: Commands) {
-    commands.remove_resource::<Receiver<RenetClient>>();
-    commands.remove_resource::<Sender<RenetClient>>();
+    commands.remove_resource::<RenetClient>();
 }
 
 fn show_menu(mut egui_ctx: ResMut<EguiContext>, mut sub_menu: ResMut<SubMenu>) {
