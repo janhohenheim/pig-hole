@@ -1,17 +1,14 @@
 use renet::ConnectToken;
 use renet::NETCODE_KEY_BYTES;
-use shared_models::{ConnectionData, LobbyResponse, PROTOCOL_ID};
+use shared_models::client_api::LobbyResponse;
+use shared_models::server_api::*;
 use std::net::SocketAddr;
 use std::time::SystemTime;
 use uuid::Uuid;
 
 const PRIVATE_KEY: &[u8; NETCODE_KEY_BYTES] = b"an example very very secret key."; // 32-bytes
 
-pub fn create_lobby(lobby: &str, host: &str) -> LobbyResponse {
-    join_lobby(lobby, host)
-}
-
-pub fn join_lobby(lobby: &str, player: &str) -> LobbyResponse {
+pub fn create_client_connection_data(lobby: &str, player: &str) -> LobbyResponse {
     // This probably eliminates uniqueness guarantee, let's see how that goes.
     let client_id = Uuid::new_v4().as_u64_pair().0;
 

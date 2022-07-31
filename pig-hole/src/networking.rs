@@ -1,4 +1,4 @@
-use bevy::{log, prelude::*};
+use bevy::prelude::*;
 use bevy_renet::{
     renet::{
         ConnectToken, RenetClient, RenetConnectionConfig, RenetServer, ServerConfig, ServerEvent,
@@ -9,7 +9,10 @@ use bevy_renet::{
 use bincode;
 use renet::RenetError;
 use serde::{Deserialize, Serialize};
-use shared_models::{ConnectionData, LobbyResponse, PROTOCOL_ID};
+use shared_models::{
+    client_api::{LobbyCreation, LobbyResponse},
+    server_api::PROTOCOL_ID,
+};
 use std::time::SystemTime;
 use std::{collections::HashMap, net::UdpSocket};
 
@@ -73,20 +76,20 @@ enum ServerMessages {
 }
 
 pub async fn create_lobby(username: &str, lobby: &str) -> RenetClient {
-    let request = ConnectionData {
-        username: username.to_string(),
-        lobby: lobby.to_string(),
+    let request = LobbyCreation {
+        name: lobby.to_string(),
+        host: username.to_string(),
     };
-    create_client_from_request("http://localhost:1337/lobbies", request).await
+    let url = "http://127.0.0.1:8000/lobbies";
+    let request = http::put(url, request).await;
+    create_client(request)
 }
 
 pub async fn join_lobby(username: &str, lobby: &str) -> RenetClient {
-    let request = ConnectionData {
-        username: username.to_string(),
-        lobby: lobby.to_string(),
-    };
-    let url = format!("http://localhost:1337/lobbies/{}", lobby);
-    create_client_from_request(&url, request).await
+    let request = username.to_string();
+    let url = format!("http://127.0.0.1:8000/lobbies/{}", lobby);
+    let request = http::put(&url, request).await;
+    create_client(request)
 }
 
 pub fn create_renet_server() -> RenetServer {
@@ -99,11 +102,6 @@ pub fn create_renet_server() -> RenetServer {
         .unwrap();
     bevy::log::info!("Server listening on {}", server_addr);
     RenetServer::new(current_time, server_config, connection_config, socket).unwrap()
-}
-
-async fn create_client_from_request(url: &str, connection_data: ConnectionData) -> RenetClient {
-    let request = http::put(url, connection_data).await;
-    create_client(request)
 }
 
 fn create_client(lobby_response: LobbyResponse) -> RenetClient {
