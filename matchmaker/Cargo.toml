@@ -12,6 +12,7 @@ serde-redis = "0.12.0"
 renet = "0.0.8"
 serde = "1.0.139"
 uuid = { version = "1.1.2", features = ["v4"] }
+rocket_cors = { git = "https://github.com/lawliet89/rocket_cors/", rev = "54fae0701dffbe5df686465780218644ee3fae5f"}
 
 [dependencies.rocket_db_pools]
 version = "0.1.0-rc.2"
