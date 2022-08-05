@@ -3085,14 +3085,22 @@ checksum = "a3e378b66a060d48947b590737b30a1be76706c8dd7b8ba0f2fe3989c68a853f"
 name = "matchmaker"
 version = "0.1.0"
 dependencies = [
+ "matchmaker-models",
  "renet",
  "rocket",
  "rocket_cors",
  "rocket_db_pools",
  "serde",
  "serde-redis",
- "shared-models",
  "uuid 1.1.2",
+]
+
+[[package]]
+name = "matchmaker-models"
+version = "0.1.0"
+dependencies = [
+ "renet",
+ "serde",
 ]
 
 [[package]]
@@ -3974,11 +3982,11 @@ dependencies = [
  "egui_extras",
  "embed-resource",
  "js-sys",
+ "matchmaker-models",
  "rand",
  "renet",
  "serde",
  "serde_json",
- "shared-models",
  "ureq",
  "wasm-bindgen",
  "wasm-bindgen-futures",
@@ -4708,14 +4716,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "900fba806f70c630b0a382d0d825e17a0f19fcd059a2ade1ff237bcddf446b31"
 dependencies = [
  "lazy_static",
-]
-
-[[package]]
-name = "shared-models"
-version = "0.1.0"
-dependencies = [
- "renet",
- "serde",
 ]
 
 [[package]]

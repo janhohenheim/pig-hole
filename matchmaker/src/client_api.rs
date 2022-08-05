@@ -5,8 +5,8 @@ use rocket_db_pools::deadpool_redis::redis::AsyncCommands;
 use rocket_db_pools::deadpool_redis::{self, redis};
 use rocket_db_pools::{Connection, Database};
 
+use matchmaker_models::client_api::*;
 use serde_redis::RedisDeserialize;
-use shared_models::client_api::*;
 
 use crate::server_connection::create_client_connection_data;
 

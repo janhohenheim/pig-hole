@@ -7,12 +7,12 @@ use bevy_renet::{
     run_if_client_conected, RenetClientPlugin, RenetServerPlugin,
 };
 use bincode;
-use renet::RenetError;
-use serde::{Deserialize, Serialize};
-use shared_models::{
+use matchmaker_models::{
     client_api::{LobbyCreation, LobbyResponse},
     server_api::PROTOCOL_ID,
 };
+use renet::RenetError;
+use serde::{Deserialize, Serialize};
 use std::time::SystemTime;
 use std::{collections::HashMap, net::UdpSocket};
 

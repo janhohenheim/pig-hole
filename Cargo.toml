@@ -2,7 +2,7 @@
 members = [
     "pig-hole",
     "matchmaker",
-    "shared-models",
+    "matchmaker-models",
     "server"
 ]
 resolver = "2"

@@ -1,7 +1,7 @@
+use matchmaker_models::client_api::LobbyResponse;
+use matchmaker_models::server_api::*;
 use renet::ConnectToken;
 use renet::NETCODE_KEY_BYTES;
-use shared_models::client_api::LobbyResponse;
-use shared_models::server_api::*;
 use std::net::SocketAddr;
 use std::time::SystemTime;
 use uuid::Uuid;
