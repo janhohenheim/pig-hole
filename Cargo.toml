@@ -5,6 +5,7 @@ members = [
     "matchmaker-models",
     "server",
     "shared",
+    "client",
 ]
 resolver = "2"
 
