@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use naia_bevy_server::Server;
 
-use crate::shared::{channels::Channels, protocol::Protocol};
+use shared::{channels::Channels, protocol::Protocol};
 
 use crate::resources::Global;
 

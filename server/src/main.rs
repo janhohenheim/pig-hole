@@ -7,7 +7,7 @@ use bevy::{
 
 use naia_bevy_server::{Plugin as ServerPlugin, ServerConfig, Stage};
 
-mod shared;
+
 use shared::{channels::Channels, config::shared_config, protocol::Protocol};
 
 mod resources;

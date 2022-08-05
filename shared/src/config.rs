@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use naia_shared::{LinkConditionerConfig, SharedConfig, SocketConfig};
 
-use crate::shared::channels::{Channels, CHANNEL_CONFIG};
+use crate::channels::{Channels, CHANNEL_CONFIG};
 
 pub fn shared_config() -> SharedConfig<Channels> {
     // Set tick rate to ~60 FPS

@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use naia_shared::{EntityProperty, Property, Replicate};
 
 #[derive(Component, Replicate)]
-#[protocol_path = "crate::shared::protocol::Protocol"]
+#[protocol_path = "crate::protocol::Protocol"]
 pub struct EntityAssignment {
     pub entity: EntityProperty,
     pub assign: Property<bool>,

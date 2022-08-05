@@ -5,7 +5,7 @@ use naia_bevy_server::{
     Server,
 };
 
-use crate::shared::{
+use shared::{
     channels::Channels,
     protocol::{EntityAssignment, Protocol},
 };
