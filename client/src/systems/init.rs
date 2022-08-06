@@ -13,9 +13,7 @@ pub fn init(mut commands: Commands, mut client: Client<Protocol, Channels>) {
     log::info!("Naia Bevy Client Demo started");
 
     client.auth(Auth::new("charlie", "12345"));
-    log::info!("Authenticated");
     client.connect("http://127.0.0.1:14191");
-    log::info!("Connected");
 
     // Setup Camera
     commands.spawn_bundle(OrthographicCameraBundle::new_2d());

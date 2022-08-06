@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{log, prelude::*};
 
 use naia_bevy_server::{
     events::{AuthorizationEvent, ConnectionEvent, DisconnectionEvent, MessageEvent},
@@ -21,9 +21,11 @@ pub fn authorization_event(
             if *auth.username == "charlie" && *auth.password == "12345" {
                 // Accept incoming connection
                 server.accept_connection(user_key);
+                log::info!("Accepted connection");
             } else {
                 // Reject incoming connection
                 server.reject_connection(user_key);
+                log::error!("Rejected connection");
             }
         }
     }
@@ -43,7 +45,7 @@ pub fn connection_event<'world, 'state>(
             // Get User's address for logging
             .address();
 
-        info!("Naia Server connected to: {}", address);
+        log::info!("Naia Server connected to: {}", address);
 
         // Create components for Entity to represent new player
 
@@ -77,7 +79,7 @@ pub fn disconnection_event(
 ) {
     for event in event_reader.iter() {
         let DisconnectionEvent(user_key, user) = event;
-        info!("Naia Server disconnected from: {:?}", user.address);
+        log::info!("Naia Server disconnected from: {:?}", user.address);
 
         if let Some(entity) = global.user_to_prediction_map.remove(user_key) {
             server
